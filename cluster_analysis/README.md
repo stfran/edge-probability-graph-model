@@ -10,55 +10,13 @@ This directory contains the **Python-side evaluation code** for extending the or
 - C_3 - 3rd-order higher-order clustering coefficient from Yin et al. (2018)
 - GCD-11 - graphlet correlation distance using the 11 non-redundant orbits for 2- to 4-node graphlets
 
-The notebooks use the **Facebook** ground-truth graph from the EPGM repository as a teaching example for the metrics.
 
 ## Files in this directory
 
 - `metrics.py` - metric implementations and graph-loading helpers
-- `analyze_graphs.py` - command-line driver that computes metrics for one graph or a directory of graphs and writes a CSV
+- `*.ipynb` - metric exploration notebooks using the Facebook data as an example
 - `README.md` - project notes, formulas, and citation record
 
-
-## Example usage
-
-Compute the default metric bundle for all graphs in `../data/gt_txt`:
-
-```bash
-python analyze_graphs.py ../data/gt_txt --output results/gt_metrics.csv
-```
-
-Compute the default metric bundle for generated graphs and compare each to a reference graph using GCD-11:
-
-```bash
-python analyze_graphs.py ../gen_res/some_model \
-  --output results/generated_metrics.csv \
-  --compute-gcd \
-  --reference ../data/gt_txt/facebook.txt \
-  --orca-path /path/to/orca
-```
-
-Also compute 5-clique density and 4th-order higher-order clustering:
-
-```bash
-python analyze_graphs.py ../data/gt_txt \
-  --output results/gt_metrics_full.csv \
-  --compute-k5 \
-  --compute-c4
-```
-
-## External dependency for GCD-11
-
-`GCD-11` requires a graphlet orbit counter. The implementation in `metrics.py` assumes the use of **ORCA** as an external executable. The Python code handles orchestration, file loading, and distance computation, while ORCA performs the orbit counting.
-
-If ORCA is not available, you can still use:
-
-- GCC
-- ALCC
-- 4-clique density
-- C_3
-- optional 5-clique density / C_4
-
-without any additional external tooling.
 
 ## Basic facts of the project
 

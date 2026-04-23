@@ -12,6 +12,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import orbit_count
 
 
 # GCD-11 uses the 11 non-redundant graphlet orbits for 2- to 4-node graphlets.
@@ -170,15 +171,16 @@ def count_k_cliques(G: nx.Graph, k: int) -> int:
 
 
 
-def k_clique_density(G: nx.Graph, k: int) -> float:
+def k_clique_density_and_count(G: nx.Graph, k: int) -> Tuple[float, int]:
     n = G.number_of_nodes()
     if n < k:
-        return 0.0
+        return 0.0, 0
     denom = math.comb(n, k)
     if denom == 0:
-        return 0.0
+        return 0.0, 0
     cliques = count_k_cliques(G, k)
-    return ( cliques / denom , cliques)
+    density = cliques / denom
+    return density, cliques
 
 
 # ---------------------------------------------------------------------------
@@ -256,70 +258,53 @@ def higher_order_global_clustering(G: nx.Graph, ell: int) -> float:
 
 
 # ---------------------------------------------------------------------------
-# GCD-11 via ORCA
+# GCD-11 via orbit-count
 # ---------------------------------------------------------------------------
 
-def _write_orca_input(G: nx.Graph, path: str | Path) -> None:
+def node_orbits_4(G: nx.Graph) -> np.ndarray:
     """
-    ORCA node format:
-      first line: n m
-      then one 0-based undirected edge per line
-    """
-    path = Path(path)
-    nodes = sorted(G.nodes())
-    relabel = {u: i for i, u in enumerate(nodes)}
-    edges = [(relabel[u], relabel[v]) for u, v in G.edges()]
-    edges = [(u, v) if u < v else (v, u) for u, v in edges]
-    edges = sorted(set(edges))
-
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(f"{len(nodes)} {len(edges)}\n")
-        for u, v in tqdm(edges, desc="Writing ORCA input"):
-            f.write(f"{u} {v}\n")
-
-
-
-def orca_node_orbits_4(G: nx.Graph, orca_path: str = "orca") -> np.ndarray:
-    """
-    Run ORCA to get node orbit counts up to 4-node graphlets.
+    Compute node orbit counts up to 4-node graphlets using orbit-count.
 
     Returns
     -------
     np.ndarray
-        Shape (n_nodes, 15). This is the standard ORCA output for node orbit
-        counts up to graphlets of size 4.
+        Shape (n_nodes, 15), matching the standard ORCA node-orbit output
+        ordering for graphlets up to size 4.
     """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-        inp = tmpdir / "graph.in"
-        out = tmpdir / "orbits.out"
+    # Make node ordering explicit and stable
+    node_list = list(sorted(G.nodes()))
+    arr = orbit_count.node_orbit_counts(
+        G,
+        graphlet_size=4,
+        node_list=node_list,
+    )
+    arr = np.asarray(arr, dtype=np.int64)
 
-        _write_orca_input(G, inp)
-        cmd = [orca_path, "node", "4", str(inp), str(out)]
-        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if arr.ndim == 1:
+        arr = arr.reshape(1, -1)
 
-        arr = np.loadtxt(out, dtype=np.int64)
-        if arr.ndim == 1:
-            arr = arr.reshape(1, -1)
-        return arr
+    if arr.shape[1] != 15:
+        raise ValueError(f"Expected 15 orbit columns for graphlet_size=4, got shape {arr.shape}")
 
+    return arr
 
 
 def gcm11_from_orbits(orbits_15: np.ndarray) -> np.ndarray:
-    """Construct the 11x11 Graphlet Correlation Matrix used in GCD-11."""
+    """
+    Construct the 11x11 Graphlet Correlation Matrix used in GCD-11.
+    """
     X = pd.DataFrame(orbits_15[:, GCD11_ORBITS])
     gcm = X.corr(method="spearman").fillna(0.0).to_numpy(dtype=float)
     return gcm
 
 
-
-def gcd11(G1: nx.Graph, G2: nx.Graph, orca_path: str = "orca") -> float:
+def gcd11(G1: nx.Graph, G2: nx.Graph) -> float:
     """
     Compute the Graphlet Correlation Distance using the 11 non-redundant
-    orbits for 2- to 4-node graphlets.
+    node orbits for 2- to 4-node graphlets.
     """
-    O1 = orca_node_orbits_4(G1, orca_path=orca_path)
-    O2 = orca_node_orbits_4(G2, orca_path=orca_path)
+    O1 = node_orbits_4(G1)
+    O2 = node_orbits_4(G2)
 
     GCM1 = gcm11_from_orbits(O1)
     GCM2 = gcm11_from_orbits(O2)
@@ -327,6 +312,7 @@ def gcd11(G1: nx.Graph, G2: nx.Graph, orca_path: str = "orca") -> float:
     iu = np.triu_indices_from(GCM1, k=1)
     v1 = GCM1[iu]
     v2 = GCM2[iu]
+
     return float(np.linalg.norm(v1 - v2))
 
 
@@ -348,15 +334,15 @@ def summarize_graph(
         "n_wedges": float(wedge_count(G)),
         "gcc": gcc(G),
         "alcc": alcc(G),
-        "k4_count": float(count_k_cliques(G, 4)),
-        "k4_density": k_clique_density(G, 4),
+        "k4_count": float(k_clique_density_and_count(G, 4)[1]),
+        "k4_density": k_clique_density_and_count(G, 4)[0],
         "C3_global": higher_order_global_clustering(G, 3),
         "C3_avg_local": higher_order_average_local_clustering(G, 3),
     }
 
     if compute_k5:
-        out["k5_count"] = float(count_k_cliques(G, 5))
-        out["k5_density"] = k_clique_density(G, 5)
+        out["k5_count"] = float(k_clique_density_and_count(G, 5)[1])
+        out["k5_density"] = k_clique_density_and_count(G, 5)[0]
 
     if compute_c4:
         out["C4_global"] = higher_order_global_clustering(G, 4)

@@ -2,3 +2,5 @@ networkx>=3.0
 numpy>=1.24
 pandas>=2.0
 tqdm
+matplotib
+orbit-count>=0.1.0
