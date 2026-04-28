@@ -2,25 +2,23 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import subprocess
-import tempfile
-import os
-import time
 import matplotlib.pyplot as plt
 
 # =========================================================
-# CONFIG: ORCA PATH
+# CONFIG
 # =========================================================
 
-ORCA_PATH = "wsl ./orca/orca"
+B = 100
+N = 120
+ALPHA = 0.05
+DATASET_NAME = "facebook"
 
 # =========================================================
-# LOAD REAL DATASET
+# LOAD GRAPH
 # =========================================================
 
 def load_edge_list(path):
     G = nx.Graph()
-
     with open(path, "r") as f:
         for line in f:
             if line.strip() == "":
@@ -28,16 +26,14 @@ def load_edge_list(path):
             u, v = line.strip().split()
             if u != v:
                 G.add_edge(int(u), int(v))
+    return nx.convert_node_labels_to_integers(G)
 
-    G = nx.convert_node_labels_to_integers(G)
-
-    print(f"\nLoaded dataset: {path}")
-    print(f"Nodes: {G.number_of_nodes()}, Edges: {G.number_of_edges()}")
-
-    return G
+def sample_subgraph(G, n=N):
+    nodes = np.random.choice(list(G.nodes()), n, replace=False)
+    return G.subgraph(nodes).copy()
 
 # =========================================================
-# FAST CORE METRICS
+# METRICS (SWAPPABLE LAYER)
 # =========================================================
 
 def triangle_stats(G):
@@ -46,30 +42,20 @@ def triangle_stats(G):
     wedges = sum(d*(d-1)//2 for _, d in G.degree())
     return tri, tri_total, wedges
 
-def gcc_from_stats(tri_total, wedges):
+def gcc(G):
+    tri, tri_total, wedges = triangle_stats(G)
     return 3 * tri_total / wedges if wedges > 0 else 0
 
-def alcc_fast(G, tri):
-    vals = []
-    for u, d in G.degree():
-        if d >= 2:
-            vals.append(tri[u] / (d*(d-1)/2))
+def alcc(G):
+    tri = nx.triangles(G)
+    vals = [
+        tri[u] / (d*(d-1)/2)
+        for u, d in G.degree()
+        if d >= 2
+    ]
     return np.mean(vals) if vals else 0
 
-# =========================================================
-# K4 (HYBRID)
-# =========================================================
-
-def k4_exact(G):
-    count = 0
-    for clique in nx.enumerate_all_cliques(G):
-        if len(clique) == 4:
-            count += 1
-        elif len(clique) > 4:
-            break
-    return count
-
-def k4_sample(G, samples=5000):
+def k4(G, samples=2000):
     nodes = list(G.nodes)
     n = len(nodes)
     if n < 4:
@@ -81,308 +67,250 @@ def k4_sample(G, samples=5000):
         if G.subgraph(quad).number_of_edges() == 6:
             count += 1
 
-    return count * (n*(n-1)*(n-2)*(n-3) / 24) / samples
+    return count * (n*(n-1)*(n-2)*(n-3)/24) / samples
 
-def k4_hybrid(G, threshold=120):
-    return k4_exact(G) if G.number_of_nodes() <= threshold else k4_sample(G)
-
-# =========================================================
-# HIGHER-ORDER CLUSTERING
-# =========================================================
-
-def C3_global_fast(G, tri_total, k4):
+def C3(G):
     tri = nx.triangles(G)
+    k4_est = k4(G)
+    W3 = sum(tri[u]*(d-2) for u, d in G.degree() if d >= 2)
+    return (12 * k4_est) / W3 if W3 > 0 else 0
 
-    W3 = 0
-    for u, d in G.degree():
-        if d >= 2:
-            W3 += tri[u] * (d - 2)
-
-    if W3 == 0:
-        return 0
-
-    return (12 * k4) / W3
-
-# =========================================================
-# ORCA
-# =========================================================
-
-def node_orbits_orca(G):
-    G = nx.convert_node_labels_to_integers(G, ordering="sorted")
-
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as f:
-        in_path = f.name
-        for u, v in G.edges():
-            f.write(f"{u} {v}\n")
-
-    out_path = in_path + ".out"
-
-    try:
-        subprocess.run(
-            [ORCA_PATH, "node", "4", in_path, out_path],
-            check=True,
-            capture_output=True
-        )
-        orbits = np.loadtxt(out_path)
-    except Exception as e:
-        print("⚠️ ORCA failed:", e)
-        orbits = None
-
-    os.remove(in_path)
-    if os.path.exists(out_path):
-        os.remove(out_path)
-
-    return orbits
+metric_functions = {
+    "gcc": gcc,
+    "alcc": alcc,
+    "k4": k4,
+    "C3": C3,
+}
 
 # =========================================================
-# GCD-11
+# PROBABILITY MODELS
 # =========================================================
 
-GCD11_ORBITS = [0,1,2,4,5,6,7,8,9,10,11]
+def er_prob(G):
+    n = G.number_of_nodes()
+    m = G.number_of_edges()
+    p = (2*m)/(n*(n-1))
+    return lambda u, v: p
 
-def gcd11(G1, G2):
-    O1 = node_orbits_orca(G1)
-    O2 = node_orbits_orca(G2)
+def chung_lu_prob(G):
+    deg = dict(G.degree())
+    m = G.number_of_edges()
+    return lambda u, v: min(1.0, (deg[u]*deg[v])/(2*m + 1e-9))
 
-    if O1 is None or O2 is None:
-        return np.nan
+def sbm_prob(G, k=4):
+    nodes = list(G.nodes())
+    blocks = {u: i % k for i, u in enumerate(nodes)}
 
-    X1 = pd.DataFrame(O1[:, GCD11_ORBITS])
-    X2 = pd.DataFrame(O2[:, GCD11_ORBITS])
+    counts = np.zeros((k, k))
+    totals = np.zeros((k, k))
 
-    GCM1 = X1.corr(method="spearman").fillna(0).to_numpy()
-    GCM2 = X2.corr(method="spearman").fillna(0).to_numpy()
+    for u in nodes:
+        for v in nodes:
+            if u >= v:
+                continue
+            i, j = blocks[u], blocks[v]
+            totals[i][j] += 1
+            totals[j][i] += 1
 
-    iu = np.triu_indices_from(GCM1, k=1)
-    return np.linalg.norm(GCM1[iu] - GCM2[iu])
+    for u, v in G.edges():
+        i, j = blocks[u], blocks[v]
+        counts[i][j] += 1
+        counts[j][i] += 1
 
-# =========================================================
-# GRAPH MODELS
-# =========================================================
+    probs = np.divide(counts, totals, out=np.zeros_like(counts), where=totals > 0)
+    return lambda u, v: probs[blocks[u]][blocks[v]]
 
-def generate_er(n):
-    return nx.erdos_renyi_graph(n, 0.05)
-
-def generate_chung_lu(n):
-    degrees = np.random.zipf(2.5, n)
-    degrees = np.clip(degrees, 1, n//2)
-    w = degrees / np.sum(degrees)
-    return nx.expected_degree_graph(w * n, selfloops=False)
-
-def generate_sbm(n, k=4):
-    sizes = [n // k] * k
-    probs = np.full((k, k), 0.01)
-    np.fill_diagonal(probs, 0.2)
-    return nx.stochastic_block_model(sizes, probs)
-
-def generate_kronecker(n):
-    P = np.array([[0.9, 0.5],
-                  [0.5, 0.1]])
-
+def kronecker_prob(G):
+    P = np.array([[0.9, 0.5],[0.5, 0.1]])
+    n = G.number_of_nodes()
     k = int(np.log2(n))
+
+    def prob(u, v):
+        p = 1.0
+        uu, vv = u, v
+        for _ in range(k):
+            p *= P[uu % 2, vv % 2]
+            uu //= 2
+            vv //= 2
+        return p
+
+    return prob
+
+# =========================================================
+# BINDING SCHEMES
+# =========================================================
+
+def sample_edgeind(n, prob):
     G = nx.Graph()
-
-    for i in range(n):
-        for j in range(i+1, n):
-            prob = 1.0
-            ii, jj = i, j
-
-            for _ in range(k):
-                prob *= P[ii % 2, jj % 2]
-                ii //= 2
-                jj //= 2
-
-            if np.random.rand() < prob:
-                G.add_edge(i, j)
-
     G.add_nodes_from(range(n))
+    for u in range(n):
+        for v in range(u+1, n):
+            if np.random.rand() < prob(u, v):
+                G.add_edge(u, v)
+    return G
+
+def sample_loclbdg(n, prob):
+    G = nx.Graph()
+    G.add_nodes_from(range(n))
+    theta = np.random.rand(n)
+    for u in range(n):
+        for v in range(u+1, n):
+            if prob(u, v) >= max(theta[u], theta[v]):
+                G.add_edge(u, v)
+    return G
+
+def sample_parabdg(n, prob):
+    G = nx.Graph()
+    G.add_nodes_from(range(n))
+    theta = np.random.rand()
+    for u in range(n):
+        for v in range(u+1, n):
+            if prob(u, v) >= theta:
+                G.add_edge(u, v)
     return G
 
 # =========================================================
-# SAMPLERS
+# GENERATOR WRAPPER
 # =========================================================
 
-def identity(G):
-    return G
+def generate_graph(G_real, model, method):
+    if model == "ER":
+        prob = er_prob(G_real)
+    elif model == "ChungLu":
+        prob = chung_lu_prob(G_real)
+    elif model == "SBM":
+        prob = sbm_prob(G_real)
+    elif model == "Kronecker":
+        prob = kronecker_prob(G_real)
 
-def edge_dropout(G, p=0.5):
-    H = nx.Graph()
-    H.add_nodes_from(G.nodes)
-    for u, v in G.edges():
-        if np.random.rand() < p:
-            H.add_edge(u, v)
-    return H
-
-def degree_bias_sampling(G):
-    H = nx.Graph()
-    H.add_nodes_from(G.nodes)
-    n = len(G)
-
-    for u, v in G.edges():
-        deg_factor = (G.degree(u) + G.degree(v)) / (2*n)
-        p = min(1.0, 2 * deg_factor)
-
-        if np.random.rand() < p:
-            H.add_edge(u, v)
-
-    return H
+    if method == "EDGEIND":
+        return sample_edgeind(N, prob)
+    elif method == "LOCLBDG":
+        return sample_loclbdg(N, prob)
+    elif method == "PARABDG":
+        return sample_parabdg(N, prob)
 
 # =========================================================
-# SUMMARY
+# MONTE CARLO TEST
 # =========================================================
 
-def summarize_graph_fast(G):
-    tri, tri_total, wedges = triangle_stats(G)
+def monte_carlo_test(x0, sims):
+    sims = np.array(sims)
 
-    gcc = gcc_from_stats(tri_total, wedges)
-    alcc = alcc_fast(G, tri)
-    k4 = k4_hybrid(G)
-    C3 = C3_global_fast(G, tri_total, k4)
+    n_le = np.sum(sims <= x0)
+    n_ge = np.sum(sims >= x0)
+
+    p = min(1.0, 2 * min((n_le+1)/(len(sims)+1),
+                         (n_ge+1)/(len(sims)+1)))
+
+    ci_low, ci_high = np.percentile(sims, [2.5, 97.5])
 
     return {
-        "n_nodes": G.number_of_nodes(),
-        "n_edges": G.number_of_edges(),
-        "triangles": tri_total,
-        "gcc": gcc,
-        "alcc": alcc,
-        "k4": k4,
-        "C3": C3
+        "real": x0,
+        "mean_sim": np.mean(sims),
+        "std_sim": np.std(sims),
+        "ci_low": ci_low,
+        "ci_high": ci_high,
+        "p_value": p,
+        "reject": p <= ALPHA
     }
 
 # =========================================================
-# EXPERIMENT LOOP
+# MAIN PIPELINE
 # =========================================================
 
-def run_experiment_fast(model_fn, sampler_fn, n=120, B=10):
-    results = []
-    start = time.time()
+def run_analysis(G_real):
 
-    for i in tqdm(range(B), desc="Trials"):
-        t0 = time.time()
+    models = ["ER", "ChungLu", "SBM", "Kronecker"]
+    methods = ["EDGEIND", "LOCLBDG", "PARABDG"]
 
-        G = model_fn(n)
-        H = sampler_fn(G)
+    raw_rows = []
+    test_rows = []
 
-        stats = summarize_graph_fast(H)
-        results.append(stats)
+    for model in models:
+        for method in methods:
 
-        print(f"[Trial {i}] gcc={stats['gcc']:.4f} "
-              f"C3={stats['C3']:.6f} k4={stats['k4']:.1f} "
-              f"time={time.time()-t0:.2f}s")
+            print(f"\nMODEL={model} METHOD={method}")
 
-    print(f"Finished in {time.time()-start:.2f}s\n")
-    return pd.DataFrame(results)
+            G0 = sample_subgraph(G_real)
+
+            real_metrics = {m: f(G0) for m, f in metric_functions.items()}
+            sim_metrics = {m: [] for m in metric_functions}
+
+            for _ in tqdm(range(B)):
+
+                G = generate_graph(G_real, model, method)
+
+                stats = {m: f(G) for m, f in metric_functions.items()}
+
+                raw_rows.append({
+                    "dataset": DATASET_NAME,
+                    "model": model,
+                    "method": method,
+                    **stats
+                })
+
+                for m in stats:
+                    sim_metrics[m].append(stats[m])
+
+            for m in metric_functions:
+                res = monte_carlo_test(real_metrics[m], sim_metrics[m])
+
+                test_rows.append({
+                    "dataset": DATASET_NAME,
+                    "model": model,
+                    "method": method,
+                    "metric": m,
+                    **res
+                })
+
+    return pd.DataFrame(raw_rows), pd.DataFrame(test_rows)
 
 # =========================================================
-# FULL EXPERIMENT
+# PLOTTING (WITH LEGEND)
 # =========================================================
 
-def full_experiment(models, samplers):
-    all_results = []
-    total_start = time.time()
+def plot_results(raw_df, test_df):
 
-    for m_name, m_fn in models.items():
-        for s_name, s_fn in samplers.items():
+    plt.figure(figsize=(8,6))
 
-            print("="*50)
-            print(f"MODEL: {m_name} | SAMPLER: {s_name}")
-            print("="*50)
+    colors = {
+        "ER": "red",
+        "ChungLu": "blue",
+        "SBM": "green",
+        "Kronecker": "purple"
+    }
 
-            df = run_experiment_fast(m_fn, s_fn)
+    for model in raw_df["model"].unique():
+        subset = raw_df[raw_df["model"] == model]
+        plt.scatter(
+            subset["gcc"],
+            subset["C3"],
+            label=model,
+            alpha=0.6,
+            color=colors.get(model, "black")
+        )
 
-            df["model"] = m_name
-            df["method"] = s_name
-
-            all_results.append(df)
-
-    print(f"\nTOTAL TIME: {time.time()-total_start:.2f}s")
-    return pd.concat(all_results)
+    plt.xlabel("GCC")
+    plt.ylabel("C3")
+    plt.title("Graph Metric Distribution (Synthetic vs Real)")
+    plt.legend()
+    plt.show()
 
 # =========================================================
-# MAIN
+# RUN
 # =========================================================
 
 if __name__ == "__main__":
 
-    # -----------------------------
-    # REAL GRAPH
-    # -----------------------------
-    real_graph = load_edge_list("../data/gt_txt/facebook.txt")
+    G_real = load_edge_list("facebook.txt")
 
-    # -----------------------------
-    # MODELS
-    # -----------------------------
-    models = {
-        "ER": generate_er,
-        "ChungLu": generate_chung_lu,
-        "SBM": generate_sbm,
-        "Kronecker": generate_kronecker,
-    }
+    raw_df, test_df = run_analysis(G_real)
 
-    samplers = {
-        "base": identity,
-        "dropout": edge_dropout,
-        "degree_bias": degree_bias_sampling,
-    }
+    print("\n===== HYPOTHESIS RESULTS =====")
+    print(test_df)
 
-    # -----------------------------
-    # SYNTHETIC EXPERIMENTS
-    # -----------------------------
-    df_models = full_experiment(models, samplers)
+    raw_df.to_csv("raw_metrics.csv", index=False)
+    test_df.to_csv("hypothesis_results.csv", index=False)
 
-    # -----------------------------
-    # REAL GRAPH EXPERIMENTS
-    # -----------------------------
-    print("\n" + "="*50)
-    print("REAL DATASET EXPERIMENT")
-    print("="*50)
-
-    real_results = []
-
-    for s_name, s_fn in samplers.items():
-        H = s_fn(real_graph)
-        stats = summarize_graph_fast(H)
-
-        stats["model"] = "Facebook"
-        stats["method"] = s_name
-
-        print(f"Sampler={s_name} | GCC={stats['gcc']:.4f} | C3={stats['C3']:.6f}")
-
-        real_results.append(stats)
-
-    df_real = pd.DataFrame(real_results)
-
-    # -----------------------------
-    # COMBINE
-    # -----------------------------
-    df = pd.concat([df_models, df_real], ignore_index=True)
-
-    print("\n===== SUMMARY =====")
-    print(df.groupby(["model", "method"]).agg(["mean", "std"]))
-
-    df.to_csv("results_with_real.csv", index=False)
-    print("\nSaved results_with_real.csv")
-
-    # -----------------------------
-    # PLOT
-    # -----------------------------
-    plt.figure()
-
-    colors = df["model"].astype("category").cat.codes
-
-    plt.scatter(df["gcc"], df["C3"], c=colors)
-    plt.xlabel("GCC")
-    plt.ylabel("C3")
-    plt.title("Synthetic vs Real Graph Structure")
-
-    plt.show()
-
-    # -----------------------------
-    # GCD COMPARISON
-    # -----------------------------
-    print("\n===== GCD vs REAL GRAPH =====")
-
-    for name, model_fn in models.items():
-        G_model = model_fn(real_graph.number_of_nodes())
-        dist = gcd11(G_model, real_graph)
-        print(f"{name} vs Facebook GCD: {dist:.4f}")
+    plot_results(raw_df, test_df)
