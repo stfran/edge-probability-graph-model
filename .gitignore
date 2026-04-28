@@ -1,3 +1,14 @@
+# data that's generated
+data/orig_cl
+data/orig_er
+data/orig_kr
+data/kron_probs
+data/orig_sbm
+fit_res
+gen_res
+generation
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

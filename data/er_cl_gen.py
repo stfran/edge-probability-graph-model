@@ -7,7 +7,7 @@ from tqdm.auto import tqdm, trange
 dataset_list = [
     "facebook",
     "hamsterster",
-    "email-dnc",
+    "web-spam", # changed from email-dnc, which errored. Deduced from paper that it should web-spam
     "polblogs",
     "bio-CE-PG",
     "bio-SC-HT",

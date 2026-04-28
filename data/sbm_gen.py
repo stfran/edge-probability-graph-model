@@ -48,7 +48,7 @@ for ds in dataset_list:
     # generate graphs
     for i_graph in range(100):
         # edge pair is sampled with probability p
-        sampled_indices = np.random.random(p_full.shape) < p_full
+        sampled_indices = np.random.random(len(p_array)) < p_array
         sampled_uv = uv_array[sampled_indices]
         # save the sampled graph
         with open(p_sbm / f"{ds}_{i_graph}.txt", "w") as f:

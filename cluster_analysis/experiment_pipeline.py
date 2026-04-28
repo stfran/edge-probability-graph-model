@@ -307,7 +307,7 @@ if __name__ == "__main__":
     # -----------------------------
     # REAL GRAPH
     # -----------------------------
-    real_graph = load_edge_list("facebook.txt")
+    real_graph = load_edge_list("../data/gt_txt/facebook.txt")
 
     # -----------------------------
     # MODELS
