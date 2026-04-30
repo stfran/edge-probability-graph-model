@@ -253,8 +253,8 @@ def plot_monte_carlo_summary(
         ),
         Rectangle(
             (0, 0), 1, 1,
-            facecolor="red",
-            edgecolor="red",
+            facecolor="green",
+            edgecolor="green",
             alpha=0.28,
             label="95% empirical interval (2.5%–97.5%)",
         ),
