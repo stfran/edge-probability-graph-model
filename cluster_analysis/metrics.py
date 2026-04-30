@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import math
 import pickle
-import subprocess
-import tempfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterator, Sequence, Tuple
@@ -20,11 +18,21 @@ import orbit_count
 GCD11_ORBITS: Sequence[int] = [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11]
 
 
+def _progress(iterable, *, desc: str, show_progress: bool):
+    return tqdm(
+        iterable,
+        desc=desc,
+        disable=not show_progress,
+        leave=False,
+        dynamic_ncols=True,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Graph loading
 # ---------------------------------------------------------------------------
 
-def load_graph(path: str | Path) -> nx.Graph:
+def load_graph(path: str | Path, *, show_progress: bool = True) -> nx.Graph:
     """
     Load an undirected, unweighted graph from one of the formats that are
     common in the EPGM repository:
@@ -42,7 +50,7 @@ def load_graph(path: str | Path) -> nx.Graph:
     if suffix in {".txt", ".edgelist", ".edges", ".csv", ""}:
         G = nx.Graph()
         with open(path, "r", encoding="utf-8") as f:
-            for line in tqdm(f, desc="Loading graph"):
+            for line in _progress(f, desc=f"Loading {path.name}", show_progress=show_progress):
                 line = line.strip()
                 if not line or line.startswith("#"):
                     continue
@@ -64,7 +72,6 @@ def load_graph(path: str | Path) -> nx.Graph:
     raise ValueError(f"Unsupported graph format: {path}")
 
 
-
 def _normalize_graph(G: nx.Graph) -> nx.Graph:
     G = nx.Graph(G)
     G.remove_edges_from(nx.selfloop_edges(G))
@@ -80,10 +87,8 @@ def unique_triangle_count(G: nx.Graph) -> int:
     return sum(tri_per_node.values()) // 3
 
 
-
 def wedge_count(G: nx.Graph) -> int:
     return sum(math.comb(d, 2) for _, d in G.degree() if d >= 2)
-
 
 
 def gcc(G: nx.Graph) -> float:
@@ -91,8 +96,7 @@ def gcc(G: nx.Graph) -> float:
     w = wedge_count(G)
     if w == 0:
         return 0.0
-    return 3 * (unique_triangle_count(G) / w) # results line up when we count all triangles
-
+    return 3 * (unique_triangle_count(G) / w)
 
 
 def alcc(G: nx.Graph) -> float:
@@ -106,22 +110,20 @@ def alcc(G: nx.Graph) -> float:
     for u, d in G.degree():
         if d >= 2:
             total += tri[u] / math.comb(d, 2)
-        else:
-            total += 0.0
     return total / n if n else 0.0
+
 
 def alcc_other(G: nx.Graph) -> float:
     """
-    Another definition:
-    average only over nodes where local clustering is defined.
-    We reproduced the paper
+    Alternative definition: average only over nodes where local clustering is defined.
+    This is not the operational definition used for the reproduced paper metrics.
     """
     tri = nx.triangles(G)
     vals = []
     for u, d in G.degree():
         if d >= 2:
             vals.append(tri[u] / math.comb(d, 2))
-    return float(np.mean(vals)) if vals else 0.0    
+    return float(np.mean(vals)) if vals else 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -135,8 +137,12 @@ def _ordered_neighbors(G: nx.Graph) -> Tuple[list[int], dict[int, int], dict[int
     return nodes, order, nbrs_fwd
 
 
-
-def enumerate_k_cliques(G: nx.Graph, k: int) -> Iterator[Tuple[int, ...]]:
+def enumerate_k_cliques(
+    G: nx.Graph,
+    k: int,
+    *,
+    show_progress: bool = True,
+) -> Iterator[Tuple[int, ...]]:
     """
     Enumerate all k-cliques exactly once using a forward-neighbor ordering.
     Suitable for exact counts on modest graphs.
@@ -161,24 +167,27 @@ def enumerate_k_cliques(G: nx.Graph, k: int) -> Iterator[Tuple[int, ...]]:
             yield from extend(prefix + (u,), next_candidates, target_size)
             candidates.remove(u)
 
-    for u in tqdm(nodes, desc="Processing nodes"):
+    for u in _progress(nodes, desc=f"Processing nodes for {k}-cliques", show_progress=show_progress):
         yield from extend((u,), set(nbrs_fwd[u]), k)
 
 
-
-def count_k_cliques(G: nx.Graph, k: int) -> int:
-    return sum(1 for _ in enumerate_k_cliques(G, k))
-
+def count_k_cliques(G: nx.Graph, k: int, *, show_progress: bool = True) -> int:
+    return sum(1 for _ in enumerate_k_cliques(G, k, show_progress=show_progress))
 
 
-def k_clique_density_and_count(G: nx.Graph, k: int) -> Tuple[float, int]:
+def k_clique_density_and_count(
+    G: nx.Graph,
+    k: int,
+    *,
+    show_progress: bool = True,
+) -> Tuple[float, int]:
     n = G.number_of_nodes()
     if n < k:
         return 0.0, 0
     denom = math.comb(n, k)
     if denom == 0:
         return 0.0, 0
-    cliques = count_k_cliques(G, k)
+    cliques = count_k_cliques(G, k, show_progress=show_progress)
     density = cliques / denom
     return density, cliques
 
@@ -187,10 +196,15 @@ def k_clique_density_and_count(G: nx.Graph, k: int) -> Tuple[float, int]:
 # Higher-order clustering (Yin et al., 2018)
 # ---------------------------------------------------------------------------
 
-def node_k_clique_membership_counts(G: nx.Graph, k: int) -> Dict[int, int]:
+def node_k_clique_membership_counts(
+    G: nx.Graph,
+    k: int,
+    *,
+    show_progress: bool = True,
+) -> Dict[int, int]:
     """For each node u, count how many k-cliques contain u."""
     counts: dict[int, int] = defaultdict(int)
-    for clique in tqdm(enumerate_k_cliques(G, k), desc="Enumerating k-cliques"):
+    for clique in enumerate_k_cliques(G, k, show_progress=show_progress):
         for u in clique:
             counts[u] += 1
     for u in G.nodes():
@@ -198,8 +212,12 @@ def node_k_clique_membership_counts(G: nx.Graph, k: int) -> Dict[int, int]:
     return dict(counts)
 
 
-
-def higher_order_local_clustering(G: nx.Graph, ell: int) -> Dict[int, float]:
+def higher_order_local_clustering(
+    G: nx.Graph,
+    ell: int,
+    *,
+    show_progress: bool = True,
+) -> Dict[int, float]:
     """
     Compute local C_ell(u) exactly using Eq. (8) in Yin et al. (2018):
 
@@ -210,25 +228,37 @@ def higher_order_local_clustering(G: nx.Graph, ell: int) -> Dict[int, float]:
     if ell < 2:
         raise ValueError("ell must be >= 2")
 
-    K_ell_u = node_k_clique_membership_counts(G, ell)
-    K_ell1_u = node_k_clique_membership_counts(G, ell + 1)
+    K_ell_u = node_k_clique_membership_counts(G, ell, show_progress=show_progress)
+    K_ell1_u = node_k_clique_membership_counts(G, ell + 1, show_progress=show_progress)
 
     out: dict[int, float] = {}
-    for u, d in tqdm(G.degree(), desc="Computing higher-order local clustering"):
+    for u, d in _progress(
+        G.degree(),
+        desc="Computing higher-order local clustering",
+        show_progress=show_progress,
+    ):
         denom = (d - ell + 1) * K_ell_u.get(u, 0)
         if denom > 0:
             out[u] = K_ell1_u.get(u, 0) / denom
     return out
 
 
-
-def higher_order_average_local_clustering(G: nx.Graph, ell: int) -> float:
-    vals = list(higher_order_local_clustering(G, ell).values())
+def higher_order_average_local_clustering(
+    G: nx.Graph,
+    ell: int,
+    *,
+    show_progress: bool = True,
+) -> float:
+    vals = list(higher_order_local_clustering(G, ell, show_progress=show_progress).values())
     return float(np.mean(vals)) if vals else 0.0
 
 
-
-def higher_order_global_clustering(G: nx.Graph, ell: int) -> float:
+def higher_order_global_clustering(
+    G: nx.Graph,
+    ell: int,
+    *,
+    show_progress: bool = True,
+) -> float:
     """
     Compute global C_ell exactly:
 
@@ -243,11 +273,15 @@ def higher_order_global_clustering(G: nx.Graph, ell: int) -> float:
     if ell < 2:
         raise ValueError("ell must be >= 2")
 
-    num_cliques = count_k_cliques(G, ell + 1)
-    K_ell_u = node_k_clique_membership_counts(G, ell)
+    num_cliques = count_k_cliques(G, ell + 1, show_progress=show_progress)
+    K_ell_u = node_k_clique_membership_counts(G, ell, show_progress=show_progress)
 
     W_ell = 0
-    for u, d in tqdm(G.degree(), desc="Computing higher-order global clustering"):
+    for u, d in _progress(
+        G.degree(),
+        desc="Computing higher-order global clustering",
+        show_progress=show_progress,
+    ):
         if d >= ell - 1:
             W_ell += K_ell_u.get(u, 0) * (d - ell + 1)
 
@@ -271,7 +305,6 @@ def node_orbits_4(G: nx.Graph) -> np.ndarray:
         Shape (n_nodes, 15), matching the standard ORCA node-orbit output
         ordering for graphlets up to size 4.
     """
-    # Make node ordering explicit and stable
     node_list = list(sorted(G.nodes()))
     arr = orbit_count.node_orbit_counts(
         G,
@@ -290,9 +323,7 @@ def node_orbits_4(G: nx.Graph) -> np.ndarray:
 
 
 def gcm11_from_orbits(orbits_15: np.ndarray) -> np.ndarray:
-    """
-    Construct the 11x11 Graphlet Correlation Matrix used in GCD-11.
-    """
+    """Construct the 11x11 Graphlet Correlation Matrix used in GCD-11."""
     X = pd.DataFrame(orbits_15[:, GCD11_ORBITS])
     gcm = X.corr(method="spearman").fillna(0.0).to_numpy(dtype=float)
     return gcm
@@ -325,8 +356,11 @@ def summarize_graph(
     *,
     compute_k5: bool = False,
     compute_c4: bool = False,
+    show_progress: bool = True,
 ) -> Dict[str, float]:
     """Compute the default bundle of graph metrics for one graph."""
+    k4_density, k4_count = k_clique_density_and_count(G, 4, show_progress=show_progress)
+
     out: Dict[str, float] = {
         "n_nodes": float(G.number_of_nodes()),
         "n_edges": float(G.number_of_edges()),
@@ -334,18 +368,19 @@ def summarize_graph(
         "n_wedges": float(wedge_count(G)),
         "gcc": gcc(G),
         "alcc": alcc(G),
-        "k4_count": float(k_clique_density_and_count(G, 4)[1]),
-        "k4_density": k_clique_density_and_count(G, 4)[0],
-        "C3_global": higher_order_global_clustering(G, 3),
-        "C3_avg_local": higher_order_average_local_clustering(G, 3),
+        "k4_count": float(k4_count),
+        "k4_density": float(k4_density),
+        "C3_global": higher_order_global_clustering(G, 3, show_progress=show_progress),
+        "C3_avg_local": higher_order_average_local_clustering(G, 3, show_progress=show_progress),
     }
 
     if compute_k5:
-        out["k5_count"] = float(k_clique_density_and_count(G, 5)[1])
-        out["k5_density"] = k_clique_density_and_count(G, 5)[0]
+        k5_density, k5_count = k_clique_density_and_count(G, 5, show_progress=show_progress)
+        out["k5_count"] = float(k5_count)
+        out["k5_density"] = float(k5_density)
 
     if compute_c4:
-        out["C4_global"] = higher_order_global_clustering(G, 4)
-        out["C4_avg_local"] = higher_order_average_local_clustering(G, 4)
+        out["C4_global"] = higher_order_global_clustering(G, 4, show_progress=show_progress)
+        out["C4_avg_local"] = higher_order_average_local_clustering(G, 4, show_progress=show_progress)
 
     return out
