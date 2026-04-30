@@ -16,7 +16,6 @@ This directory contains the **Python-side evaluation code** for extending the or
 - `metrics.py` - metric implementations and graph-loading helpers
 - `*.ipynb` - metric exploration notebooks using the Facebook data as an example
 - `README.md` - project notes, formulas, and citation record
-- results.tar.gz - creates unzips a results directory that includes the edge-independent results, the fitted models, and the random graphs we generated on those models
 
 
 ## Basic facts of the project
@@ -60,23 +59,31 @@ bash compile.sh # updated
 bash gen.sh
 ```
 
-## Unzipping results
-As an alternative to running the project code, you can just unzip the results.zip file.
+## Consolidating results
+experiment_pipeline.py assumes all the edge-independent, local-binding, and parallel binding test results have been consolidated into the following directories. Copy all the following directories to ./cluster_analysis/results
+```
+mkdir -p ./cluster_analysis/results/data
+cp -r ./data/orig_cl/ ./cluster_analysis/results/data/orig_cl/
+cp -r ./data/orig_er/ ./cluster_analysis/results/data/orig_er/
+cp -r ./data/orig_kr/ ./cluster_analysis/results/data/orig_kr/
+cp -r ./data/orig_sbm/ ./cluster_analysis/results/data/orig_sbm/
+cp -r ./gen_res/ ./cluster_analysis/results/gen_res/
+```
+
+Or if you have results.tar.gz, just unpack with
 ```
 cd cluster_analysis
-tar -xzvf rasults.tar.gz results
+tar -xzvf results.tar.gz results
 ```
 
-The unpacked results contain 100 graphs per dataset arranged by probability fitting model.
-
 Edge-independent (baseline results)
-- ./cluster_analysis/results/data/orig_cl
+- ./cluster_analysis/results/data/orig_cl (move from ./data/orgi_cl, etc.)
 - ./cluster_analysis/results/data/orig_er
 - ./cluster_analysis/results/data/orig_kr
 - ./cluster_analysis/results/data/orig_sbm
 
 Local Binding 
-- ./cluster_analysis/results/gen_res/CL_iter/t1
+- ./cluster_analysis/results/gen_res/CL_iter/t1 
 - ./cluster_analysis/results/gen_res/ER_iter/traingle
 - ./cluster_analysis/results/gen_res/KR_iter/t1
 - ./cluster_analysis/results/gen_res/SBM_iter/t1
