@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import tempfile
 import warnings
 
 import matplotlib.pyplot as plt
@@ -15,19 +16,21 @@ import metrics as M
 # CONFIG
 # =========================================================
 
-# Use cached raw_metrics.csv / hypothesis_results.csv when available.
+# Use cached raw_metrics.csv / hypothesis_results.csv / ground_truth_metrics.csv
+# when available.
 RESUME_FROM_CSV = True
 OVERWRITE_RESULTS = False
 
 # Save after this many generated graphs. Set to 1 for best interruption safety.
-CHECKPOINT_EVERY_N_GRAPHS = 50
+CHECKPOINT_EVERY_N_GRAPHS = 1
 
-# None runs all datasets.
-# To run subsets, use any of:
-# ["facebook", "bio-CE-PG", "bio-SC-HT", "hamsterster", "polblogs", "web-spam"]
-DATASETS = ["facebook"]
-#DATASETS = None
+# Show a progress bar over metric names, e.g., 1/6 metrics done.
+# Ground-truth metric progress is always useful; generated-graph metric progress
+# is controlled separately below.
+SHOW_METRIC_PROGRESS = True
+SHOW_GENERATED_METRIC_PROGRESS = False
 
+# Directories
 BASE_DIR = Path(__file__).resolve().parent
 GT_DIR = BASE_DIR.parent / "data" / "gt_txt"
 EDGE_IND_RESULTS_DIR = BASE_DIR / "results" / "data"
@@ -36,12 +39,18 @@ ANALYSIS_DIR = BASE_DIR / "analysis"
 
 RAW_OUT = ANALYSIS_DIR / "raw_metrics.csv"
 TEST_OUT = ANALYSIS_DIR / "hypothesis_results.csv"
+GT_METRICS_OUT = ANALYSIS_DIR / "ground_truth_metrics.csv"
 
-RAW_KEY_COLS = ["dataset", "model_key", "method", "trial_key"]
-TEST_KEY_COLS = ["dataset", "model_key", "method", "metric"]
-
+# HYPOTHESIS TEST PARAMETERS
 EXPECTED_B = 100  # warn if a generated-results directory has a different count
 ALPHA = 0.05
+
+# RUN CONFIGURATION
+# None runs all datasets.
+# To run subsets, use any of:
+# ["facebook", "bio-CE-PG", "bio-SC-HT", "hamsterster", "polblogs", "web-spam"]
+# DATASETS = ["facebook"]
+DATASETS = None
 
 MODELS = [
     "ER",
@@ -77,6 +86,11 @@ TQDM_KW = {
     "dynamic_ncols": True,
     "mininterval": 0.5,
 }
+
+# RESULTS COLUMNS
+RAW_KEY_COLS = ["dataset", "model_key", "method", "trial_key"]
+TEST_KEY_COLS = ["dataset", "model_key", "method", "metric"]
+GT_KEY_COLS = ["dataset", "metric"]
 
 # =========================================================
 # GENERATED GRAPH DIRECTORY LOOKUP
@@ -180,22 +194,29 @@ def generated_graph_paths(dataset: str, model: str, method: str) -> list[Path]:
 # =========================================================
 
 
-def compute_metrics(G, metric_names: list[str] | None = None) -> dict[str, float]:
+def compute_metrics(
+    G,
+    metric_names: list[str] | tuple[str, ...] | None = None,
+    *,
+    desc: str = "Computing metrics",
+    show_progress: bool = SHOW_METRIC_PROGRESS,
+    progress_position: int = 4,
+) -> dict[str, float]:
     """
     Lazily compute only the requested metrics.
 
-    This intentionally avoids M.summarize_graph(G), because summarize_graph
-    eagerly computes the whole default bundle. A smoke test can set
-    METRIC_NAMES = ["gcc"].
+    The progress bar is over metric names, not graph-loading lines or graph
+    nodes. This makes expensive metric bundles easier to track.
     """
     if metric_names is None:
         metric_names = METRIC_NAMES
+    metric_names = list(metric_names)
 
-    cache: dict[str, dict[str, float]] = {}
+    cache = {}
 
-    def get_k4() -> dict[str, float]:
+    def get_k4():
         if "k4" not in cache:
-            density, count = M.k_clique_density_and_count(G, 4, show_progress=False)
+            density, count = M.k_clique_density_and_count(G, 4)
             cache["k4"] = {
                 "k4_density": float(density),
                 "k4_count": float(count),
@@ -208,21 +229,21 @@ def compute_metrics(G, metric_names: list[str] | None = None) -> dict[str, float
         "n_triangles": lambda: float(M.unique_triangle_count(G)),
         "n_wedges": lambda: float(M.wedge_count(G)),
 
-        # Operational definitions from metrics.py / binding repo alignment.
+        # Operational definitions from metrics.py / original binding code.
         "gcc": lambda: float(M.gcc(G)),
         "alcc": lambda: float(M.alcc(G)),
 
-        # Exact clique metrics.
+        # Exact 4-clique metrics.
         "k4_count": lambda: get_k4()["k4_count"],
         "k4_density": lambda: get_k4()["k4_density"],
 
-        # Exact higher-order clustering.
-        "C3_global": lambda: float(M.higher_order_global_clustering(G, 3, show_progress=False)),
-        "C3_avg_local": lambda: float(M.higher_order_average_local_clustering(G, 3, show_progress=False)),
+        # Exact higher-order clustering metrics.
+        "C3_global": lambda: float(M.higher_order_global_clustering(G, 3)),
+        "C3_avg_local": lambda: float(M.higher_order_average_local_clustering(G, 3)),
 
-        # Backward-compatible aliases, if needed.
+        # Backward-compatible aliases.
         "k4": lambda: get_k4()["k4_count"],
-        "C3": lambda: float(M.higher_order_global_clustering(G, 3, show_progress=False)),
+        "C3": lambda: float(M.higher_order_global_clustering(G, 3)),
     }
 
     unknown = [m for m in metric_names if m not in metric_registry]
@@ -232,7 +253,21 @@ def compute_metrics(G, metric_names: list[str] | None = None) -> dict[str, float
             f"Available metrics: {sorted(metric_registry.keys())}"
         )
 
-    return {m: metric_registry[m]() for m in metric_names}
+    iterator = tqdm(
+        metric_names,
+        desc=desc,
+        position=progress_position,
+        leave=False,
+        disable=not show_progress,
+        **TQDM_KW,
+    )
+
+    out: dict[str, float] = {}
+    for metric_name in iterator:
+        iterator.set_postfix_str(metric_name)
+        out[metric_name] = metric_registry[metric_name]()
+
+    return out
 
 # =========================================================
 # MONTE CARLO TEST
@@ -294,12 +329,38 @@ def _read_csv_if_exists(path: Path) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def _atomic_write_csv(df: pd.DataFrame, path: Path) -> None:
+    """
+    Write a CSV via a temporary file then rename it into place.
+
+    This reduces the chance of leaving a partially written CSV if the process is
+    interrupted during checkpointing.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        newline="",
+        delete=False,
+        dir=path.parent,
+        prefix=f".{path.stem}.",
+        suffix=".tmp",
+    ) as tmp:
+        tmp_path = Path(tmp.name)
+        df.to_csv(tmp, index=False)
+
+    tmp_path.replace(path)
+
+
 def _model_key_from_value(value) -> str:
     if pd.isna(value):
         return ""
     value = str(value)
-    if value in RESULT_DIRS or value in MODELS_DISPLAY:
+
+    if value in MODELS_DISPLAY:
         return value
+
     display_to_key = {v: k for k, v in MODELS_DISPLAY.items()}
     return display_to_key.get(value, value)
 
@@ -382,8 +443,8 @@ def save_checkpoint(raw_df: pd.DataFrame, test_df: pd.DataFrame) -> None:
     if not test_df.empty:
         test_df = normalize_test_df(test_df).drop_duplicates(TEST_KEY_COLS, keep="last")
 
-    raw_df.to_csv(RAW_OUT, index=False)
-    test_df.to_csv(TEST_OUT, index=False)
+    _atomic_write_csv(raw_df, RAW_OUT)
+    _atomic_write_csv(test_df, TEST_OUT)
 
 
 def raw_metric_columns_available(raw_df: pd.DataFrame) -> bool:
@@ -420,8 +481,8 @@ def hypothesis_complete(
     """
     Check whether hypothesis_results.csv already has the requested metric tests.
 
-    The n_sims check prevents a stale partial hypothesis row from being treated as
-    complete after an interrupted run.
+    The n_sims check prevents a stale partial hypothesis row from being treated
+    as complete after an interrupted run.
     """
     if test_df.empty:
         return False
@@ -464,6 +525,136 @@ def remove_existing_hypothesis_rows(
 
     return test_df[keep].copy()
 
+
+def upsert_raw_row(raw_df: pd.DataFrame, row: dict) -> pd.DataFrame:
+    """
+    Insert or update one raw metric row while preserving older metric columns
+    that are not present in the new row.
+
+    This is useful when you first run METRIC_NAMES=["gcc"] and later rerun with
+    additional metrics.
+    """
+    if raw_df.empty:
+        return pd.DataFrame([row])
+
+    key_mask = pd.Series(True, index=raw_df.index)
+    for col in RAW_KEY_COLS:
+        key_mask &= raw_df[col].astype(str) == str(row[col])
+
+    if not key_mask.any():
+        return pd.concat([raw_df, pd.DataFrame([row])], ignore_index=True)
+
+    idx = raw_df.index[key_mask][0]
+
+    for col, val in row.items():
+        if col not in raw_df.columns:
+            raw_df[col] = np.nan
+        raw_df.at[idx, col] = val
+
+    return raw_df
+
+# ---------------------------------------------------------------------------
+# Ground-truth metric cache
+# ---------------------------------------------------------------------------
+
+
+def load_ground_truth_metrics() -> pd.DataFrame:
+    if OVERWRITE_RESULTS or not RESUME_FROM_CSV or not GT_METRICS_OUT.exists():
+        return pd.DataFrame(columns=["dataset", "metric", "value"])
+
+    gt_df = _read_csv_if_exists(GT_METRICS_OUT)
+    if gt_df.empty:
+        return pd.DataFrame(columns=["dataset", "metric", "value"])
+
+    required = {"dataset", "metric", "value"}
+    if not required.issubset(gt_df.columns):
+        raise ValueError(
+            f"Existing {GT_METRICS_OUT} must contain columns {sorted(required)}"
+        )
+
+    return gt_df.drop_duplicates(GT_KEY_COLS, keep="last")
+
+
+def save_ground_truth_metrics(gt_df: pd.DataFrame) -> None:
+    gt_df = gt_df.drop_duplicates(GT_KEY_COLS, keep="last")
+    _atomic_write_csv(gt_df, GT_METRICS_OUT)
+
+
+def get_cached_ground_truth_metrics(
+    gt_df: pd.DataFrame,
+    dataset: str,
+    metric_names: list[str] | tuple[str, ...] | None = None,
+) -> tuple[dict[str, float], set[str]]:
+    if metric_names is None:
+        metric_names = METRIC_NAMES
+    metric_names = list(metric_names)
+
+    if gt_df.empty:
+        return {}, set(metric_names)
+
+    subset = gt_df[
+        (gt_df["dataset"] == dataset)
+        & (gt_df["metric"].isin(metric_names))
+    ]
+
+    cached = {
+        row["metric"]: float(row["value"])
+        for _, row in subset.iterrows()
+        if pd.notna(row["value"])
+    }
+
+    missing = set(metric_names) - set(cached.keys())
+    return cached, missing
+
+
+def get_ground_truth_metrics(
+    dataset: str,
+    gt_path: Path,
+    gt_df: pd.DataFrame,
+) -> tuple[dict[str, float], pd.DataFrame]:
+    """
+    Return ground-truth metrics for this dataset, computing only missing metrics.
+
+    This prevents recomputing expensive deterministic ground-truth metrics on
+    every run.
+    """
+    cached, missing = get_cached_ground_truth_metrics(gt_df, dataset, METRIC_NAMES)
+
+    if not missing:
+        tqdm.write(f"[cache hit] ground-truth metrics: {dataset}")
+        return cached, gt_df
+
+    missing_ordered = [m for m in METRIC_NAMES if m in missing]
+    tqdm.write(
+        f"[cache miss] ground-truth metrics: {dataset}; "
+        f"computing {missing_ordered}"
+    )
+
+    G_real = M.load_graph(gt_path, show_progress=False)
+
+    newly_computed = compute_metrics(
+        G_real,
+        metric_names=missing_ordered,
+        desc=f"{dataset} | ground truth metrics",
+        show_progress=True,
+        progress_position=4,
+    )
+
+    new_rows = [
+        {"dataset": dataset, "metric": metric_name, "value": value}
+        for metric_name, value in newly_computed.items()
+    ]
+
+    if new_rows:
+        gt_df = pd.concat([gt_df, pd.DataFrame(new_rows)], ignore_index=True)
+        gt_df = gt_df.drop_duplicates(GT_KEY_COLS, keep="last")
+        save_ground_truth_metrics(gt_df)
+
+    # Return a complete mapping in METRIC_NAMES order.
+    combined = dict(cached)
+    combined.update(newly_computed)
+    return {m: combined[m] for m in METRIC_NAMES}, gt_df
+
 # =========================================================
 # MAIN PIPELINE
 # =========================================================
@@ -477,6 +668,7 @@ def iter_ground_truth_files() -> list[Path]:
 
 def run_analysis() -> tuple[pd.DataFrame, pd.DataFrame]:
     raw_df, test_df = load_existing_results()
+    gt_metrics_df = load_ground_truth_metrics()
 
     for gt_path in tqdm(
         iter_ground_truth_files(),
@@ -487,15 +679,11 @@ def run_analysis() -> tuple[pd.DataFrame, pd.DataFrame]:
     ):
         dataset = gt_path.stem
 
-        G_real = None
-        real_metrics = None
-
-        def get_real_metrics() -> dict[str, float]:
-            nonlocal G_real, real_metrics
-            if real_metrics is None:
-                G_real = M.load_graph(gt_path, show_progress=False)
-                real_metrics = compute_metrics(G_real)
-            return real_metrics
+        real_metrics, gt_metrics_df = get_ground_truth_metrics(
+            dataset=dataset,
+            gt_path=gt_path,
+            gt_df=gt_metrics_df,
+        )
 
         for model in tqdm(
             MODELS,
@@ -547,7 +735,15 @@ def run_analysis() -> tuple[pd.DataFrame, pd.DataFrame]:
                     graph_bar.set_postfix_str(graph_path.name)
 
                     G_sim = M.load_graph(graph_path, show_progress=False)
-                    stats = compute_metrics(G_sim)
+                    stats = compute_metrics(
+                        G_sim,
+                        desc=(
+                            f"{dataset} | {model} | {method} | "
+                            f"trial {trial_key_from_path(graph_path)}"
+                        ),
+                        show_progress=SHOW_GENERATED_METRIC_PROGRESS,
+                        progress_position=4,
+                    )
 
                     row = {
                         "dataset": dataset,
@@ -560,7 +756,7 @@ def run_analysis() -> tuple[pd.DataFrame, pd.DataFrame]:
                         **stats,
                     }
 
-                    raw_df = pd.concat([raw_df, pd.DataFrame([row])], ignore_index=True)
+                    raw_df = upsert_raw_row(raw_df, row)
                     raw_df = normalize_raw_df(raw_df).drop_duplicates(RAW_KEY_COLS, keep="last")
 
                     graphs_since_checkpoint += 1
@@ -583,7 +779,6 @@ def run_analysis() -> tuple[pd.DataFrame, pd.DataFrame]:
                         "Hypothesis rows will be computed from available rows."
                     )
 
-                real = get_real_metrics()
                 new_test_rows = []
 
                 for metric_name in METRIC_NAMES:
@@ -592,7 +787,7 @@ def run_analysis() -> tuple[pd.DataFrame, pd.DataFrame]:
                     else:
                         sims = combo_raw[metric_name].dropna().to_numpy(dtype=float)
 
-                    res = monte_carlo_test(real[metric_name], sims)
+                    res = monte_carlo_test(real_metrics[metric_name], sims)
                     new_test_rows.append({
                         "dataset": dataset,
                         "model": MODELS_DISPLAY.get(model, model),
@@ -609,114 +804,6 @@ def run_analysis() -> tuple[pd.DataFrame, pd.DataFrame]:
                 save_checkpoint(raw_df, test_df)
 
     return raw_df, test_df
-
-# =========================================================
-# VISUALIZATION
-# =========================================================
-
-
-def _ordered_pipeline_labels() -> tuple[dict[str, int], list[str]]:
-    y_map: dict[str, int] = {}
-    labels: list[str] = []
-    idx = 0
-    for model in MODELS:
-        for method in METHODS:
-            key = f"{model}+{method}"
-            y_map[key] = idx
-            labels.append(f"{MODELS_DISPLAY.get(model, model)}+{method}")
-            idx += 1
-    return y_map, labels
-
-
-def plot_swimlane(raw_df: pd.DataFrame, test_df: pd.DataFrame, metric: str = "gcc", dataset: str | None = None) -> None:
-    if metric not in raw_df.columns:
-        warnings.warn(f"Metric {metric!r} not found in raw_df; skipping swimlane plot.")
-        return
-
-    if dataset is not None:
-        raw_df = raw_df[raw_df["dataset"] == dataset]
-        test_df = test_df[test_df["dataset"] == dataset]
-
-    test_metric_df = test_df[test_df["metric"] == metric]
-    y_map, labels = _ordered_pipeline_labels()
-
-    plt.figure(figsize=(11, 6))
-
-    for _, row in raw_df.iterrows():
-        key = f"{row['model_key']}+{row['method']}"
-        if key not in y_map:
-            continue
-        plt.scatter(row[metric], y_map[key], color="black", s=20, alpha=0.45)
-
-    label_used = False
-    for _, row in test_metric_df.iterrows():
-        key = f"{row['model_key']}+{row['method']}"
-        if key not in y_map:
-            continue
-        y = y_map[key]
-        plt.plot([row["ci_low"], row["ci_high"]], [y, y], linewidth=3)
-        plt.scatter(
-            row["real"],
-            y,
-            marker="*",
-            s=180,
-            color="black",
-            label="Ground truth" if not label_used else "",
-        )
-        label_used = True
-
-    title_prefix = f"{dataset}: " if dataset else ""
-    plt.yticks(list(y_map.values()), labels)
-    plt.xlabel(metric.upper())
-    plt.ylabel("Pipeline (Model + Method)")
-    plt.title(f"{title_prefix}{metric.upper()} - Monte Carlo Test with Simulation Spread")
-    plt.grid(alpha=0.25)
-    if label_used:
-        plt.legend()
-    plt.tight_layout()
-
-    ANALYSIS_DIR.mkdir(parents=True, exist_ok=True)
-    dataset_part = f"{dataset}_" if dataset else ""
-    out_path = ANALYSIS_DIR / f"{dataset_part}{metric}_swimlane.png"
-    plt.savefig(out_path, dpi=300)
-    plt.close()
-
-
-def plot_percentile_band(test_df: pd.DataFrame, metric: str = "gcc", dataset: str | None = None) -> None:
-    if dataset is not None:
-        test_df = test_df[test_df["dataset"] == dataset]
-
-    subset = test_df[test_df["metric"] == metric].copy()
-    if subset.empty:
-        warnings.warn(f"No rows to plot for dataset={dataset}, metric={metric}")
-        return
-
-    method_order = {method: i for i, method in enumerate(METHODS)}
-    model_order = {model: i for i, model in enumerate(MODELS)}
-    subset["_model_order"] = subset["model_key"].map(model_order).fillna(10**6)
-    subset["_method_order"] = subset["method"].map(method_order).fillna(10**6)
-    subset = subset.sort_values(["_model_order", "_method_order"])
-
-    subset["label"] = subset.apply(lambda r: f"{r['model']}+{r['method']}", axis=1)
-
-    plt.figure(figsize=(10, 5))
-    y = np.arange(len(subset))
-
-    plt.hlines(y, subset["ci_low"], subset["ci_high"], linewidth=6)
-    plt.scatter(subset["real"], y, marker="*", s=150, color="black")
-
-    title_prefix = f"{dataset}: " if dataset else ""
-    plt.yticks(y, subset["label"])
-    plt.xlabel(metric.upper())
-    plt.title(f"{title_prefix}{metric.upper()} Percentile Bands (2.5%–97.5%)")
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-
-    ANALYSIS_DIR.mkdir(parents=True, exist_ok=True)
-    dataset_part = f"{dataset}_" if dataset else ""
-    out_path = ANALYSIS_DIR / f"{dataset_part}{metric}_percentile_band.png"
-    plt.savefig(out_path, dpi=300)
-    plt.close()
 
 # =========================================================
 # RUN
@@ -742,8 +829,4 @@ if __name__ == "__main__":
     available_display_cols = [c for c in display_cols if c in test_df.columns]
     print(test_df[available_display_cols] if available_display_cols else test_df)
 
-    if not test_df.empty and "dataset" in test_df.columns:
-        for dataset in sorted(test_df["dataset"].dropna().unique()):
-            for metric in METRIC_NAMES:
-                plot_swimlane(raw_df, test_df, metric=metric, dataset=dataset)
-                plot_percentile_band(test_df, metric=metric, dataset=dataset)
+    

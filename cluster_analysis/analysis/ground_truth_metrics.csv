@@ -1,0 +1,7 @@
+dataset,metric,value
+bio-CE-PG,gcc,0.3208356459697971
+bio-CE-PG,alcc,0.4466932007590472
+bio-CE-PG,k4_count,9608852.0
+bio-CE-PG,k4_density,2.8237251726886397e-05
+bio-CE-PG,C3_global,0.2465664397327217
+bio-CE-PG,C3_avg_local,0.1221576646808128
