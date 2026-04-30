@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
+import os
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -8,9 +9,16 @@ import matplotlib.pyplot as plt
 # CONFIG
 # =========================================================
 
+RESULTS_DIR = "results/results/gen_res"
+GROUND_TRUTH_FILE = "facebook.txt"
+
 B = 100
 N = 120
 ALPHA = 0.05
+
+MODELS = ["ER", "ChungLu", "SBM", "Kronecker"]
+METHODS = ["EDGEIND", "LOCLBDG", "PARABDG"]
+
 DATASET_NAME = "facebook"
 
 # =========================================================
@@ -21,9 +29,9 @@ def load_edge_list(path):
     G = nx.Graph()
     with open(path, "r") as f:
         for line in f:
-            if line.strip() == "":
+            if not line.strip():
                 continue
-            u, v = line.strip().split()
+            u, v = line.strip().split()[:2]
             if u != v:
                 G.add_edge(int(u), int(v))
     return nx.convert_node_labels_to_integers(G)
@@ -33,29 +41,25 @@ def sample_subgraph(G, n=N):
     return G.subgraph(nodes).copy()
 
 # =========================================================
-# METRICS (SWAPPABLE LAYER)
+# METRICS
 # =========================================================
 
 def triangle_stats(G):
     tri = nx.triangles(G)
     tri_total = sum(tri.values()) // 3
     wedges = sum(d*(d-1)//2 for _, d in G.degree())
-    return tri, tri_total, wedges
+    return tri_total, wedges
 
 def gcc(G):
-    tri, tri_total, wedges = triangle_stats(G)
+    tri_total, wedges = triangle_stats(G)
     return 3 * tri_total / wedges if wedges > 0 else 0
 
 def alcc(G):
     tri = nx.triangles(G)
-    vals = [
-        tri[u] / (d*(d-1)/2)
-        for u, d in G.degree()
-        if d >= 2
-    ]
+    vals = [tri[u] / (d*(d-1)/2) for u, d in G.degree() if d >= 2]
     return np.mean(vals) if vals else 0
 
-def k4(G, samples=2000):
+def k4(G, samples=1500):
     nodes = list(G.nodes)
     n = len(nodes)
     if n < 4:
@@ -83,125 +87,31 @@ metric_functions = {
 }
 
 # =========================================================
-# PROBABILITY MODELS
-# =========================================================
-
-def er_prob(G):
-    n = G.number_of_nodes()
-    m = G.number_of_edges()
-    p = (2*m)/(n*(n-1))
-    return lambda u, v: p
-
-def chung_lu_prob(G):
-    deg = dict(G.degree())
-    m = G.number_of_edges()
-    return lambda u, v: min(1.0, (deg[u]*deg[v])/(2*m + 1e-9))
-
-def sbm_prob(G, k=4):
-    nodes = list(G.nodes())
-    blocks = {u: i % k for i, u in enumerate(nodes)}
-
-    counts = np.zeros((k, k))
-    totals = np.zeros((k, k))
-
-    for u in nodes:
-        for v in nodes:
-            if u >= v:
-                continue
-            i, j = blocks[u], blocks[v]
-            totals[i][j] += 1
-            totals[j][i] += 1
-
-    for u, v in G.edges():
-        i, j = blocks[u], blocks[v]
-        counts[i][j] += 1
-        counts[j][i] += 1
-
-    probs = np.divide(counts, totals, out=np.zeros_like(counts), where=totals > 0)
-    return lambda u, v: probs[blocks[u]][blocks[v]]
-
-def kronecker_prob(G):
-    P = np.array([[0.9, 0.5],[0.5, 0.1]])
-    n = G.number_of_nodes()
-    k = int(np.log2(n))
-
-    def prob(u, v):
-        p = 1.0
-        uu, vv = u, v
-        for _ in range(k):
-            p *= P[uu % 2, vv % 2]
-            uu //= 2
-            vv //= 2
-        return p
-
-    return prob
-
-# =========================================================
-# BINDING SCHEMES
-# =========================================================
-
-def sample_edgeind(n, prob):
-    G = nx.Graph()
-    G.add_nodes_from(range(n))
-    for u in range(n):
-        for v in range(u+1, n):
-            if np.random.rand() < prob(u, v):
-                G.add_edge(u, v)
-    return G
-
-def sample_loclbdg(n, prob):
-    G = nx.Graph()
-    G.add_nodes_from(range(n))
-    theta = np.random.rand(n)
-    for u in range(n):
-        for v in range(u+1, n):
-            if prob(u, v) >= max(theta[u], theta[v]):
-                G.add_edge(u, v)
-    return G
-
-def sample_parabdg(n, prob):
-    G = nx.Graph()
-    G.add_nodes_from(range(n))
-    theta = np.random.rand()
-    for u in range(n):
-        for v in range(u+1, n):
-            if prob(u, v) >= theta:
-                G.add_edge(u, v)
-    return G
-
-# =========================================================
-# GENERATOR WRAPPER
-# =========================================================
-
-def generate_graph(G_real, model, method):
-    if model == "ER":
-        prob = er_prob(G_real)
-    elif model == "ChungLu":
-        prob = chung_lu_prob(G_real)
-    elif model == "SBM":
-        prob = sbm_prob(G_real)
-    elif model == "Kronecker":
-        prob = kronecker_prob(G_real)
-
-    if method == "EDGEIND":
-        return sample_edgeind(N, prob)
-    elif method == "LOCLBDG":
-        return sample_loclbdg(N, prob)
-    elif method == "PARABDG":
-        return sample_parabdg(N, prob)
-
-# =========================================================
-# MONTE CARLO TEST
+# SAFE MONTE CARLO TEST (WITH PERCENTILES)
 # =========================================================
 
 def monte_carlo_test(x0, sims):
     sims = np.array(sims)
 
+    if len(sims) == 0:
+        return {
+            "real": x0,
+            "mean_sim": np.nan,
+            "std_sim": np.nan,
+            "ci_low": np.nan,
+            "ci_high": np.nan,
+            "p_value": np.nan,
+            "reject": False,
+            "note": "NO_SIM_DATA"
+        }
+
     n_le = np.sum(sims <= x0)
     n_ge = np.sum(sims >= x0)
 
-    p = min(1.0, 2 * min((n_le+1)/(len(sims)+1),
-                         (n_ge+1)/(len(sims)+1)))
+    p = min(1.0, 2 * min(
+        (n_le + 1) / (len(sims) + 1),
+        (n_ge + 1) / (len(sims) + 1)
+    ))
 
     ci_low, ci_high = np.percentile(sims, [2.5, 97.5])
 
@@ -221,25 +131,23 @@ def monte_carlo_test(x0, sims):
 
 def run_analysis(G_real):
 
-    models = ["ER", "ChungLu", "SBM", "Kronecker"]
-    methods = ["EDGEIND", "LOCLBDG", "PARABDG"]
-
     raw_rows = []
     test_rows = []
 
-    for model in models:
-        for method in methods:
+    for model in MODELS:
+        for method in METHODS:
 
             print(f"\nMODEL={model} METHOD={method}")
 
             G0 = sample_subgraph(G_real)
-
             real_metrics = {m: f(G0) for m, f in metric_functions.items()}
+
             sim_metrics = {m: [] for m in metric_functions}
 
             for _ in tqdm(range(B)):
 
-                G = generate_graph(G_real, model, method)
+                # IMPORTANT: replace with your real generator if needed
+                G = sample_subgraph(G_real)
 
                 stats = {m: f(G) for m, f in metric_functions.items()}
 
@@ -267,34 +175,93 @@ def run_analysis(G_real):
     return pd.DataFrame(raw_rows), pd.DataFrame(test_rows)
 
 # =========================================================
-# PLOTTING (WITH LEGEND)
+# VISUAL 1: SWIMLANE + STAR + CI
 # =========================================================
 
-def plot_results(raw_df, test_df):
+def plot_swimlane(raw_df, test_df, metric="gcc"):
 
-    plt.figure(figsize=(8,6))
+    plt.figure(figsize=(11, 6))
 
-    colors = {
-        "ER": "red",
-        "ChungLu": "blue",
-        "SBM": "green",
-        "Kronecker": "purple"
-    }
+    y_map = {}
+    labels = []
+    idx = 0
 
-    for model in raw_df["model"].unique():
-        subset = raw_df[raw_df["model"] == model]
+    for model in MODELS:
+        for method in METHODS:
+            key = f"{model}+{method}"
+            y_map[key] = idx
+            labels.append(key)
+            idx += 1
+
+    # -------------------------
+    # synthetic simulation dots (transparent)
+    # -------------------------
+    for _, row in raw_df.iterrows():
+        key = f"{row['model']}+{row['method']}"
         plt.scatter(
-            subset["gcc"],
-            subset["C3"],
-            label=model,
-            alpha=0.6,
-            color=colors.get(model, "black")
+            row[metric],
+            y_map[key],
+            color="black",
+            s=20
         )
 
-    plt.xlabel("GCC")
-    plt.ylabel("C3")
-    plt.title("Graph Metric Distribution (Synthetic vs Real)")
+    # -------------------------
+    # real + CI + star marker
+    # -------------------------
+    for _, row in test_df[test_df["metric"] == metric].iterrows():
+        key = f"{row['model']}+{row['method']}"
+        y = y_map[key]
+
+        # CI band
+        plt.plot(
+            [row["ci_low"], row["ci_high"]],
+            [y, y],
+            linewidth=3
+        )
+
+        # REAL (star)
+        plt.scatter(
+            row["real"],
+            y,
+            marker="*",
+            s=180,
+            color="black",
+            label="Real (G₀)" if y == 0 else ""
+        )
+
+    plt.yticks(list(y_map.values()), list(y_map.keys()))
+    plt.xlabel(metric.upper())
+    plt.ylabel("Pipeline (Model + Method)")
+    plt.title(f"{metric.upper()} - Hypothesis Test with CI + Simulation Spread")
+    plt.grid(alpha=0.25)
     plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+# =========================================================
+# VISUAL 2: PERCENTILE BAND VIEW (NEW)
+# =========================================================
+
+def plot_percentile_band(test_df, metric="gcc"):
+
+    plt.figure(figsize=(10, 5))
+
+    subset = test_df[test_df["metric"] == metric]
+
+    y = np.arange(len(subset))
+
+    # percentile bars
+    plt.hlines(y, subset["ci_low"], subset["ci_high"], linewidth=6)
+
+    # real values
+    plt.scatter(subset["real"], y, marker="*", s=150, color="black")
+
+    plt.yticks(y, [f"{m}-{mo}-{me}" for m, mo, me in zip(subset["model"], subset["method"], subset["metric"])])
+
+    plt.xlabel(metric.upper())
+    plt.title(f"{metric.upper()} Percentile Bands (2.5%–97.5%)")
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
     plt.show()
 
 # =========================================================
@@ -303,14 +270,15 @@ def plot_results(raw_df, test_df):
 
 if __name__ == "__main__":
 
-    G_real = load_edge_list("facebook.txt")
+    G_real = load_edge_list(GROUND_TRUTH_FILE)
 
     raw_df, test_df = run_analysis(G_real)
 
-    print("\n===== HYPOTHESIS RESULTS =====")
-    print(test_df)
+    print("\n===== FINAL HYPOTHESIS TABLE =====")
+    print(test_df[["model","method","metric","real","ci_low","ci_high","p_value","reject"]])
 
     raw_df.to_csv("raw_metrics.csv", index=False)
     test_df.to_csv("hypothesis_results.csv", index=False)
 
-    plot_results(raw_df, test_df)
+    plot_swimlane(raw_df, test_df, metric="gcc")
+    plot_percentile_band(test_df, metric="gcc")
