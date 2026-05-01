@@ -1,0 +1,69 @@
+\begin{longtable}{lllrrrrrrc}
+\caption{Full numerical Monte Carlo hypothesis-test results. The empirical interval is the 2.5--97.5 percentile interval of the generated graphs.}\label{tab:full-hypothesis-results}\\
+\toprule
+Dataset & Model & Method & Metric & Ground truth & Mean $\pm$ SD & Emp. low & Emp. high & $p$ & Reject? \\
+\midrule
+\endfirsthead
+\toprule
+Dataset & Model & Method & Metric & Ground truth & Mean $\pm$ SD & Emp. low & Emp. high & $p$ & Reject? \\
+\midrule
+\endhead
+\midrule
+\multicolumn{10}{r}{Continued on next page} \\
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+bio-CE-PG & ER & Edge-independent & GCC & 0.321 & 0.0331 $\pm$ 2.214e-04 & 0.0327 & 0.0335 & 0.020 & Yes \\
+bio-CE-PG & ER & Edge-independent & ALCC & 0.447 & 0.0331 $\pm$ 2.230e-04 & 0.0327 & 0.0335 & 0.020 & Yes \\
+bio-CE-PG & ER & Edge-independent & $K_4$-density & 2.824e-05 & 1.311e-09 $\pm$ 7.664e-11 & 1.186e-09 & 1.463e-09 & 0.020 & Yes \\
+bio-CE-PG & ER & Edge-independent & $C_3$ & 0.247 & 0.00109 $\pm$ 5.586e-05 & 0.001 & 0.00119 & 0.020 & Yes \\
+bio-CE-PG & ER & Local binding & GCC & 0.321 & 0.426 $\pm$ 0.0973 & 0.26 & 0.629 & 0.356 & No \\
+bio-CE-PG & ER & Local binding & ALCC & 0.447 & 0.262 $\pm$ 0.0604 & 0.149 & 0.378 & 0.020 & Yes \\
+bio-CE-PG & ER & Local binding & $K_4$-density & 2.824e-05 & 8.727e-05 $\pm$ 6.829e-05 & 5.276e-06 & 2.588e-04 & 0.436 & No \\
+bio-CE-PG & ER & Local binding & $C_3$ & 0.247 & 0.411 $\pm$ 0.147 & 0.16 & 0.705 & 0.257 & No \\
+bio-CE-PG & ER & Parallel binding & GCC & 0.321 & 0.511 $\pm$ 0.0414 & 0.453 & 0.61 & 0.020 & Yes \\
+bio-CE-PG & ER & Parallel binding & ALCC & 0.447 & 0.752 $\pm$ 0.0382 & 0.694 & 0.839 & 0.020 & Yes \\
+bio-CE-PG & ER & Parallel binding & $K_4$-density & 2.824e-05 & 1.192e-04 $\pm$ 2.974e-05 & 8.663e-05 & 2.050e-04 & 0.020 & Yes \\
+bio-CE-PG & ER & Parallel binding & $C_3$ & 0.247 & 0.47 $\pm$ 0.0491 & 0.398 & 0.586 & 0.020 & Yes \\
+bio-CE-PG & CL & Edge-independent & GCC & 0.321 & 0.223 $\pm$ 0.00141 & 0.221 & 0.226 & 0.020 & Yes \\
+bio-CE-PG & CL & Edge-independent & ALCC & 0.447 & 0.221 $\pm$ 0.00405 & 0.214 & 0.228 & 0.020 & Yes \\
+bio-CE-PG & CL & Edge-independent & $K_4$-density & 2.824e-05 & 1.296e-05 $\pm$ 4.207e-07 & 1.219e-05 & 1.367e-05 & 0.020 & Yes \\
+bio-CE-PG & CL & Edge-independent & $C_3$ & 0.247 & 0.132 $\pm$ 0.00167 & 0.129 & 0.135 & 0.020 & Yes \\
+bio-CE-PG & CL & Local binding & GCC & 0.321 & 0.291 $\pm$ 0.0164 & 0.263 & 0.33 & 0.139 & No \\
+bio-CE-PG & CL & Local binding & ALCC & 0.447 & 0.428 $\pm$ 0.0327 & 0.365 & 0.486 & 0.594 & No \\
+bio-CE-PG & CL & Local binding & $K_4$-density & 2.824e-05 & 7.133e-05 $\pm$ 2.529e-05 & 3.836e-05 & 1.302e-04 & 0.020 & Yes \\
+bio-CE-PG & CL & Local binding & $C_3$ & 0.247 & 0.181 $\pm$ 0.0179 & 0.158 & 0.231 & 0.040 & Yes \\
+bio-CE-PG & CL & Parallel binding & GCC & 0.321 & 0.309 $\pm$ 0.00408 & 0.301 & 0.316 & 0.020 & Yes \\
+bio-CE-PG & CL & Parallel binding & ALCC & 0.447 & 0.578 $\pm$ 0.0117 & 0.556 & 0.6 & 0.020 & Yes \\
+bio-CE-PG & CL & Parallel binding & $K_4$-density & 2.824e-05 & 8.592e-05 $\pm$ 1.028e-05 & 6.810e-05 & 1.062e-04 & 0.020 & Yes \\
+bio-CE-PG & CL & Parallel binding & $C_3$ & 0.247 & 0.179 $\pm$ 0.00353 & 0.172 & 0.186 & 0.020 & Yes \\
+bio-CE-PG & SB & Edge-independent & GCC & 0.321 & 0.258 $\pm$ 0.00161 & 0.255 & 0.261 & 0.020 & Yes \\
+bio-CE-PG & SB & Edge-independent & ALCC & 0.447 & 0.201 $\pm$ 0.00187 & 0.198 & 0.205 & 0.020 & Yes \\
+bio-CE-PG & SB & Edge-independent & $K_4$-density & 2.824e-05 & 8.480e-06 $\pm$ 2.619e-07 & 8.029e-06 & 8.960e-06 & 0.020 & Yes \\
+bio-CE-PG & SB & Edge-independent & $C_3$ & 0.247 & 0.135 $\pm$ 0.00189 & 0.132 & 0.139 & 0.020 & Yes \\
+bio-CE-PG & SB & Local binding & GCC & 0.321 & 0.326 $\pm$ 0.0288 & 0.28 & 0.398 & 0.950 & No \\
+bio-CE-PG & SB & Local binding & ALCC & 0.447 & 0.416 $\pm$ 0.042 & 0.339 & 0.488 & 0.515 & No \\
+bio-CE-PG & SB & Local binding & $K_4$-density & 2.824e-05 & 7.610e-05 $\pm$ 3.635e-05 & 3.218e-05 & 1.691e-04 & 0.059 & No \\
+bio-CE-PG & SB & Local binding & $C_3$ & 0.247 & 0.225 $\pm$ 0.0398 & 0.175 & 0.334 & 0.396 & No \\
+bio-CE-PG & SB & Parallel binding & GCC & 0.321 & 0.315 $\pm$ 0.0884 & 0.198 & 0.566 & 0.950 & No \\
+bio-CE-PG & SB & Parallel binding & ALCC & 0.447 & 0.354 $\pm$ 0.0618 & 0.258 & 0.482 & 0.178 & No \\
+bio-CE-PG & SB & Parallel binding & $K_4$-density & 2.824e-05 & 5.045e-05 $\pm$ 5.734e-05 & 9.329e-06 & 2.616e-04 & 0.772 & No \\
+bio-CE-PG & SB & Parallel binding & $C_3$ & 0.247 & 0.301 $\pm$ 0.131 & 0.141 & 0.697 & 0.634 & No \\
+bio-CE-PG & KR & Edge-independent & GCC & 0.321 & 0.0687 $\pm$ 7.953e-04 & 0.0672 & 0.0702 & 0.020 & Yes \\
+bio-CE-PG & KR & Edge-independent & ALCC & 0.447 & 0.12 $\pm$ 0.00221 & 0.116 & 0.125 & 0.020 & Yes \\
+bio-CE-PG & KR & Edge-independent & $K_4$-density & 2.824e-05 & 8.314e-08 $\pm$ 5.672e-09 & 7.331e-08 & 9.424e-08 & 0.020 & Yes \\
+bio-CE-PG & KR & Edge-independent & $C_3$ & 0.247 & 0.0145 $\pm$ 5.884e-04 & 0.0134 & 0.0156 & 0.020 & Yes \\
+bio-CE-PG & KR & Local binding & GCC & 0.321 & 0.18 $\pm$ 0.118 & 0.0735 & 0.518 & 0.257 & No \\
+bio-CE-PG & KR & Local binding & ALCC & 0.447 & 0.304 $\pm$ 0.0673 & 0.18 & 0.425 & 0.059 & No \\
+bio-CE-PG & KR & Local binding & $K_4$-density & 2.824e-05 & 4.459e-05 $\pm$ 1.326e-04 & 1.229e-07 & 4.888e-04 & 0.317 & No \\
+bio-CE-PG & KR & Local binding & $C_3$ & 0.247 & 0.118 $\pm$ 0.113 & 0.0281 & 0.433 & 0.277 & No \\
+bio-CE-PG & KR & Parallel binding & GCC & 0.321 & 0.265 $\pm$ 0.09 & 0.135 & 0.443 & 0.416 & No \\
+bio-CE-PG & KR & Parallel binding & ALCC & 0.447 & 0.47 $\pm$ 0.0433 & 0.379 & 0.547 & 0.535 & No \\
+bio-CE-PG & KR & Parallel binding & $K_4$-density & 2.824e-05 & 2.884e-05 $\pm$ 3.966e-05 & 1.355e-06 & 1.342e-04 & 0.614 & No \\
+bio-CE-PG & KR & Parallel binding & $C_3$ & 0.247 & 0.244 $\pm$ 0.124 & 0.0858 & 0.538 & 0.851 & No \\
+bio-SC-HT & ER & Edge-independent & GCC & 0.377 & 0.0292 $\pm$ 1.924e-04 & 0.0289 & 0.0296 & 0.020 & Yes \\
+bio-SC-HT & ER & Edge-independent & ALCC & 0.35 & 0.0292 $\pm$ 1.930e-04 & 0.0288 & 0.0296 & 0.020 & Yes \\
+bio-SC-HT & ER & Edge-independent & $K_4$-density & 3.402e-05 & 6.285e-10 $\pm$ 3.433e-11 & 5.670e-10 & 7.154e-10 & 0.020 & Yes \\
+bio-SC-HT & ER & Edge-independent & $C_3$ & 0.309 & 8.595e-04 $\pm$ 3.810e-05 & 7.907e-04 & 9.428e-04 & 0.020 & Yes \\
+\end{longtable}

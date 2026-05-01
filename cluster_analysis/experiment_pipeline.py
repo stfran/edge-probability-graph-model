@@ -76,10 +76,10 @@ METHODS = [
 METRIC_NAMES = [
     "gcc",
     "alcc",
-    "k4_count",
+#    "k4_count",
     "k4_density",
     "C3_global",
-    "C3_avg_local",
+#    "C3_avg_local",
 ]
 
 TQDM_KW = {

@@ -76,6 +76,12 @@ cd cluster_analysis
 tar -xzvf results.tar.gz results
 ```
 
+Then run experiment_pipeline.py. Note that this takes a long while. 
+```
+cd cluster_analysis
+python experiment_pipeline.py
+```
+
 Edge-independent (baseline results)
 - ./cluster_analysis/results/data/orig_cl (move from ./data/orgi_cl, etc.)
 - ./cluster_analysis/results/data/orig_er
@@ -98,6 +104,17 @@ Ground Truth (not part of results)
 - ./data/gt_txt
 
 Note that for ER, the original code outputs a directory named 'relax' that we do not include because it does not appear to be what is reported in the paper. Indeed, the other methods have commented out hyperparamenter choices, but we likewise only keep those reported in the paper.
+
+## Plotting
+After or as experiment_pipeline.py is running, you can generate the plots of the hypothesis test results on each of the metrics. 
+```
+cd cluster_analysis
+python plot_analysis.py
+```
+
+plot_analysis.py will create one plot per dataset and metric combo in the `plots` 
+
+
 
 ## What are we comparing
 Running all the project code (or unzipping the results) gives us all the data to reproduce the results reported in Table II of Bu et al. Beyond reproducing the table, we extend the original measurements in two ways. First, we add two metrics and a graph topology distance measurement. Second, we evaluate the metrics with a hypothesis test. 
