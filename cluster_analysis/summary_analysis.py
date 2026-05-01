@@ -62,6 +62,21 @@ METRIC_ORDER = [
     "C3_global"
 ]
 
+DATASET_SHORT = {
+    "hamsterster": "Hams",
+    "facebook": "Fcbk",
+    "polblogs": "Polb",
+    "web-spam": "Spam",
+    "bio-CE-PG": "Cepg",
+    "bio-SC-HT": "Scht",
+}
+
+METHOD_SHORT = {
+    "EDGEIND": "EDGE",
+    "LOCLBDG": "LOCL",
+    "PARABDG": "PARA",
+}
+
 MODEL_LABELS = {
     "ER": "ER",
     "CL": "CL",
@@ -217,6 +232,112 @@ def fmt_pvalue(p: float) -> str:
         return r"$<10^{-3}$"
     return f"{p:.3f}"
 
+def fmt_pvalue_compact(p: float) -> str:
+    """Compact p-value formatter for dense appendix tables."""
+    if pd.isna(p):
+        return "--"
+
+    p = float(p)
+
+    if p < 0.001:
+        return r"$<.001$"
+
+    s = f"{p:.3f}"
+    if s.startswith("0."):
+        s = s[1:]
+    return s
+
+
+def fmt_interval_compact(low: float, high: float, metric: str) -> str:
+    """
+    Compact two-line empirical interval formatter.
+
+    Produces:
+      [low-
+       high]
+
+    k4_density is scaled consistently with the table header.
+    """
+    if pd.isna(low) or pd.isna(high):
+        return "--"
+
+    low_s = fmt_metric_num(low, metric)
+    high_s = fmt_metric_num(high, metric)
+
+    return rf"\shortstack{{[{low_s}-\\{high_s}]}}"
+
+
+def metric_scale(metric: str) -> float:
+    """
+    Scale metrics for compact table display.
+
+    # k4_density is multiplied by 1e4 and labeled as x10^4 in the header.
+    """
+    if metric == "k4_density":
+        return 1e4
+    return 1.0
+
+
+def fmt_metric_num(x: float, metric: str, digits: int = 2) -> str:
+    """
+    Format a metric value for the dense appendix table.
+
+    All values are rounded to two decimals, following the compact style
+    of the original Table II. k4_density is displayed after multiplying
+    by 1e4.
+    """
+    if pd.isna(x):
+        return "--"
+
+    value = float(x) * metric_scale(metric)
+    return f"{value:.{digits}f}"
+
+
+def fmt_pvalue_table(p: float) -> str:
+    """Two-decimal p-value formatter for the dense appendix table."""
+    if pd.isna(p):
+        return "--"
+
+    p = float(p)
+
+    if p < 0.005 and p > 0:
+        return r"$<0.01$"
+
+    return f"{p:.2f}"
+
+
+def fmt_decision(reject: bool) -> str:
+    """
+    Decision marker:
+      x = reject
+      o = fail to reject / plausible
+    """
+    return r"$\times$" if bool(reject) else r"$\circ$"
+
+
+def model_variants(model_key: str) -> list[str]:
+    """Allow SB/SBM aliases in the CSV."""
+    if model_key in {"SB", "SBM"}:
+        return ["SB", "SBM"]
+    return [model_key]
+
+
+def metric_label_header(metric: str) -> str:
+    """
+    Compact metric label for the dense table header.
+    """
+    labels = {
+        "gcc": "GCC",
+        "alcc": "ALCC",
+        "k4_density": r"\shortstack{$K_4$ dens.\\$\times 10^4$}",
+        "C3_global": r"$C_3$",
+        "C3_avg_local": r"\shortstack{$C_3$\\local}",
+    }
+    return labels.get(metric, LATEX_METRIC_LABELS.get(metric, latex_escape(metric)))
+
+def chunked(items: list[str], size: int) -> list[list[str]]:
+    """Split a list into fixed-size chunks."""
+    return [items[i:i + size] for i in range(0, len(items), size)]
 
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     """Validate, filter, and add derived columns."""
@@ -623,95 +744,248 @@ def make_aggregate_table(df: pd.DataFrame, out_path: Path) -> None:
 
 def make_full_numerical_table(df: pd.DataFrame, out_path: Path) -> None:
     """
-    Create a longtable with all numerical results.
+    Create one full numerical appendix table in portrait orientation.
 
-    This is intended for the appendix.
+    The table is split into dataset panels of three datasets each, but it
+    remains a single generated LaTeX file. Each panel follows a Table-II-like
+    structure:
+
+      - dataset groups across columns,
+      - metric subcolumns within each dataset,
+      - one GroundTruth row,
+      - model/method blocks in the body.
+
+    For each model/method/metric/dataset combination, four stacked rows are used:
+
+      μ     generated-graph mean
+      I95   empirical interval formatted as [low-high] over two lines
+      p     two-sided Monte Carlo p-value
+      D     decision marker: x = reject, o = fail to reject
+
+    k4_density values are multiplied by 1e4 and labeled as (E-4).
     """
-    sort_dataset = {v: i for i, v in enumerate(DATASET_ORDER)}
-    sort_model = {
-        "ER": 0,
-        "CL": 1,
-        "SB": 2,
-        "SBM": 2,
-        "KR": 3,
-    }
-    sort_method = {v: i for i, v in enumerate(METHOD_ORDER)}
-    sort_metric = {v: i for i, v in enumerate(METRIC_ORDER)}
+    datasets = ordered_present(df["dataset"], DATASET_ORDER)
+    dataset_panels = chunked(datasets, 3)
 
-    df = df.copy()
-    df["_dataset_order"] = df["dataset"].map(sort_dataset).fillna(999)
-    df["_model_order"] = df["model_key"].map(sort_model).fillna(999)
-    df["_method_order"] = df["method"].map(sort_method).fillna(999)
-    df["_metric_order"] = df["metric"].map(sort_metric).fillna(999)
+    metrics = [m for m in METRIC_ORDER if m in set(df["metric"])]
+    methods = ordered_present(df["method"], METHOD_ORDER)
 
-    df = df.sort_values(
-        ["_dataset_order", "dataset", "_model_order", "_method_order", "_metric_order"]
-    )
+    # Stable model order while accepting either SB or SBM from the CSV.
+    raw_models = ordered_present(df["model_key"], MODEL_ORDER)
+
+    models = []
+    seen_model_family = set()
+    for m in raw_models:
+        family = "SB" if m in {"SB", "SBM"} else m
+        if family not in seen_model_family:
+            models.append(m)
+            seen_model_family.add(family)
+
+    method_labels = METHOD_SHORT
+
+    # Portrait-oriented dense table:
+    # 3 left columns + 3 datasets * 4 metrics = 15 columns.
+    # Wider columns so the table fills the page better.
+    model_col_width = 0.045
+    method_col_width = 0.065
+    entry_col_width = 0.045
+
+    # Total target table width. Keep slightly under 1.0 to account for rules and padding.
+    target_table_width = 0.965
+
+    centered_p = r">{\centering\arraybackslash}p"
+
+    def make_col_spec(panel_datasets: list[str]) -> str:
+        n_metric_cols = len(panel_datasets) * len(metrics)
+
+        fixed_width = model_col_width + method_col_width + entry_col_width
+        metric_col_width = (target_table_width - fixed_width) / n_metric_cols
+
+        col_spec = (
+            rf"|{centered_p}{{{model_col_width:.4f}\linewidth}}"
+            rf"|{centered_p}{{{method_col_width:.4f}\linewidth}}"
+            rf"|{centered_p}{{{entry_col_width:.4f}\linewidth}}||"
+        )
+
+        for _dataset in panel_datasets:
+            for _metric in metrics:
+                col_spec += rf"{centered_p}{{{metric_col_width:.4f}\linewidth}}|"
+            col_spec += "|"
+
+        return col_spec
+
+    def total_cols(panel_datasets: list[str]) -> int:
+        return 3 + len(panel_datasets) * len(metrics)
+
+    def append_panel_header(lines: list[str], panel_datasets: list[str]) -> None:
+        # Dataset group row.
+        row = [r"\multicolumn{3}{|c||}{dataset}"]
+        for dataset in panel_datasets:
+            dshort = latex_escape(DATASET_SHORT.get(dataset, dataset))
+            row.append(rf"\multicolumn{{{len(metrics)}}}{{c||}}{{{dshort}}}")
+        lines.append(r"\hline")
+        lines.append(" & ".join(row) + r" \\")
+
+        # Metric subheader row.
+        row = [r"\multicolumn{3}{|c||}{metric}"]
+        for _dataset in panel_datasets:
+            for metric in metrics:
+                row.append(metric_label_header(metric))
+        lines.append(r"\hline")
+        lines.append(" & ".join(row) + r" \\")
+
+        # Ground-truth row.
+        row = [r"\multicolumn{3}{|c||}{GroundTruth}"]
+        for dataset in panel_datasets:
+            for metric in metrics:
+                gt_rows = df[
+                    (df["dataset"] == dataset)
+                    & (df["metric"] == metric)
+                    & (df["real"].notna())
+                ]
+
+                if gt_rows.empty:
+                    row.append("--")
+                else:
+                    gt = float(gt_rows.iloc[0]["real"])
+                    row.append(fmt_metric_num(gt, metric))
+
+        lines.append(r"\hline")
+        lines.append(" & ".join(row) + r" \\")
+        lines.append(r"\hline\hline")
+
+        # Body-side labels.
+        row = ["Model", "Method", "Entry"]
+        for _dataset in panel_datasets:
+            for _metric in metrics:
+                row.append("")
+        lines.append(" & ".join(row) + r" \\")
+        lines.append(r"\hline")
+
+    def append_panel_body(lines: list[str], panel_datasets: list[str]) -> None:
+        # Four logical rows per method. I95 is one row with a two-line cell.
+        entry_rows = [
+            ("mean", r"$\mu$"),
+            ("interval", r"$I_{95}$"),
+            ("p", r"$p$"),
+            ("decision", r"$D$"),
+        ]
+
+        for model in models:
+            model_keys = model_variants(model)
+            model_label = latex_escape(MODEL_LABELS.get(model, model))
+            model_span = len(methods) * len(entry_rows)
+
+            for method_idx, method in enumerate(methods):
+                method_label = latex_escape(method_labels.get(method, method))
+                method_span = len(entry_rows)
+
+                for entry_idx, (entry_kind, entry_label) in enumerate(entry_rows):
+                    row_cells: list[str] = []
+
+                    # Model multirow only once per model block.
+                    if method_idx == 0 and entry_idx == 0:
+                        row_cells.append(
+                            rf"\multirow{{{model_span}}}{{*}}{{\centering {model_label}}}"
+                        )
+                    else:
+                        row_cells.append("")
+
+                    # Method multirow once per method block.
+                    if entry_idx == 0:
+                        row_cells.append(
+                            rf"\multirow{{{method_span}}}{{*}}{{\centering {method_label}}}"
+                        )
+                    else:
+                        row_cells.append("")
+
+                    row_cells.append(entry_label)
+
+                    for dataset in panel_datasets:
+                        for metric in metrics:
+                            rows = df[
+                                (df["dataset"] == dataset)
+                                & (df["model_key"].isin(model_keys))
+                                & (df["method"] == method)
+                                & (df["metric"] == metric)
+                            ]
+
+                            if rows.empty:
+                                row_cells.append("--")
+                                continue
+
+                            result = rows.iloc[0]
+
+                            if entry_kind == "mean":
+                                value = fmt_metric_num(result["mean_sim"], metric)
+                            elif entry_kind == "interval":
+                                value = fmt_interval_compact(
+                                    result["ci_low"],
+                                    result["ci_high"],
+                                    metric,
+                                )
+                            elif entry_kind == "p":
+                                value = fmt_pvalue_table(result["p_value"])
+                            elif entry_kind == "decision":
+                                value = fmt_decision(result["reject"])
+                            else:
+                                value = "--"
+
+                            row_cells.append(value)
+
+                    lines.append(" & ".join(row_cells) + r" \\")
+
+                # Separator after each method block.
+                lines.append(r"\hline")
+
 
     lines: list[str] = []
 
-    lines.append(r"\begin{longtable}{lllrrrrrrc}")
-    lines.append(
-        r"\caption{Full numerical Monte Carlo hypothesis-test results. "
-        r"The empirical interval is the 2.5--97.5 percentile interval of the generated graphs.}"
-        r"\label{tab:full-hypothesis-results}\\"
-    )
-    lines.append(r"\toprule")
-    lines.append(
-        r"Dataset & Model & Method & Metric & Ground truth & Mean $\pm$ SD & "
-        r"Emp. low & Emp. high & $p$ & Reject? \\"
-    )
-    lines.append(r"\midrule")
-    lines.append(r"\endfirsthead")
+    lines.append(r"\begingroup")
+    lines.append(r"\setlength{\LTcapwidth}{\textwidth}")
+    lines.append(r"\setlength{\LTleft}{0pt}")
+    lines.append(r"\setlength{\LTright}{0pt}")
+    lines.append(r"\setlength{\tabcolsep}{1.6pt}")
+    lines.append(r"\renewcommand{\arraystretch}{1.10}")
+    lines.append(r"\scriptsize")
 
-    lines.append(r"\toprule")
-    lines.append(
-        r"Dataset & Model & Method & Metric & Ground truth & Mean $\pm$ SD & "
-        r"Emp. low & Emp. high & $p$ & Reject? \\"
-    )
-    lines.append(r"\midrule")
-    lines.append(r"\endhead")
+    for panel_idx, panel_datasets in enumerate(dataset_panels):
+        col_spec = make_col_spec(panel_datasets)
+        ncols = total_cols(panel_datasets)
 
-    lines.append(r"\midrule")
-    lines.append(r"\multicolumn{10}{r}{Continued on next page} \\")
-    lines.append(r"\midrule")
-    lines.append(r"\endfoot")
+        lines.append(rf"\begin{{longtable}}{{{col_spec}}}")
 
-    lines.append(r"\bottomrule")
-    lines.append(r"\endlastfoot")
-
-    for _, row in df.iterrows():
-        dataset = latex_escape(row["dataset"])
-        model = latex_escape(MODEL_LABELS.get(row["model_key"], row["model_key"]))
-        method = latex_escape(METHOD_LABELS.get(row["method"], row["method"]))
-        metric = LATEX_METRIC_LABELS.get(row["metric"], latex_escape(row["metric"]))
-
-        real = fmt_num(row["real"])
-        mean_sd = rf"{fmt_num(row['mean_sim'])} $\pm$ {fmt_num(row['std_sim'])}"
-        ci_low = fmt_num(row["ci_low"])
-        ci_high = fmt_num(row["ci_high"])
-        p_value = fmt_pvalue(row["p_value"])
-        reject = "Yes" if bool(row["reject"]) else "No"
-
-        lines.append(
-            " & ".join(
-                [
-                    dataset,
-                    model,
-                    method,
-                    metric,
-                    real,
-                    mean_sd,
-                    ci_low,
-                    ci_high,
-                    p_value,
-                    reject,
-                ]
+        if panel_idx == 0:
+            # Keep caption readable. Do not put it inside \tiny.
+            lines.append(
+                r"\caption{\small Full numerical Monte Carlo hypothesis-test results. "
+                r"Columns are grouped by dataset and metric. The GroundTruth row reports the "
+                r"observed metric value for each dataset. For each fitted model and realization "
+                r"method, the stacked rows report $\mu$ (generated-graph mean), "
+                r"$I_{95}$ (empirical 2.5--97.5 percentile interval), $p$ "
+                r"(two-sided Monte Carlo p-value), and $D$ (decision), where "
+                r"$\times$ indicates rejection and $\circ$ indicates failure to reject. "
+                r"$K_4$-density entries are scaled by $10^4$ for readability. "
+                r"EDGE, LOCL, and PARA denote edge-independent, local binding, and parallel "
+                r"binding realization, respectively.}"
+                r"\label{tab:full-hypothesis-results}\\"
             )
-            + r" \\"
-        )
+        else:
+            lines.append(
+                rf"\multicolumn{{{ncols}}}{{c}}{{\textbf{{Table~\ref{{tab:full-hypothesis-results}} continued}}}} \\"
+            )
 
-    lines.append(r"\end{longtable}")
+        append_panel_header(lines, panel_datasets)
+        append_panel_body(lines, panel_datasets)
+
+        lines.append(r"\end{longtable}")
+        lines.append("")
+
+        if panel_idx < len(dataset_panels) - 1:
+            lines.append(r"\vspace{0.75em}")
+            lines.append("")
+
+    lines.append(r"\endgroup")
     lines.append("")
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
