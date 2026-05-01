@@ -513,21 +513,21 @@ def make_heatmap(df: pd.DataFrame, out_path: Path) -> None:
             norm=norm,
         )
 
-        ax.set_title(METHOD_LABELS.get(method, method), fontsize=11)
+        ax.set_title(METHOD_LABELS.get(method, method), fontsize=14)
 
         ax.set_xticks(np.arange(n_cols))
         ax.set_xticklabels(
             [METRIC_LABELS.get(m, m) for m in metrics],
             rotation=45,
             ha="right",
-            fontsize=9,
+            fontsize=14,
         )
 
         ax.set_yticks(np.arange(n_rows))
         if ax_idx == 0:
             ax.set_yticklabels(
                 [MODEL_LABELS.get(model, model) for _, model in row_items],
-                fontsize=8,
+                fontsize=14,
             )
         else:
             ax.tick_params(axis="y", labelleft=False)
@@ -550,7 +550,7 @@ def make_heatmap(df: pd.DataFrame, out_path: Path) -> None:
                     ax.text(
                         j, i, "–",
                         ha="center", va="center",
-                        fontsize=9, color="0.35"
+                        fontsize=12, color="0.35"
                     )
                 elif plausible[i, j]:
                     ax.scatter(
@@ -565,7 +565,7 @@ def make_heatmap(df: pd.DataFrame, out_path: Path) -> None:
                     ax.text(
                         j, i, "×",
                         ha="center", va="center",
-                        fontsize=10, fontweight="bold",
+                        fontsize=12, fontweight="bold",
                         color="black", zorder=4,
                     )
 
@@ -607,24 +607,24 @@ def make_heatmap(df: pd.DataFrame, out_path: Path) -> None:
                     rotation=90,
                     va="center",
                     ha="center",
-                    fontsize=9,
+                    fontsize=14,
                     transform=trans,
                     clip_on=False,
                 )
 
     fig.suptitle(
         "Monte Carlo plausibility scorecard",
-        fontsize=13,
+        fontsize=16,
         y=0.985,
     )
 
-    fig.text(
-        0.5,
-        0.025,
-        r"○ = fail to reject / plausible; × = reject.",
-        ha="center",
-        fontsize=10,
-    )
+    # fig.text(
+    #     0.5,
+    #     0.025,
+    #     r"○ = fail to reject / plausible; × = reject.",
+    #     ha="center",
+    #     fontsize=10,
+    # )
 
     fig.subplots_adjust(
         left=0.22,
@@ -793,7 +793,7 @@ def make_full_numerical_table(df: pd.DataFrame, out_path: Path) -> None:
     # Total target table width. Keep slightly under 1.0 to account for rules and padding.
     target_table_width = 0.965
 
-    centered_p = r">{\centering\arraybackslash}p"
+    centered_col = r">{\centering\arraybackslash}m"
 
     def make_col_spec(panel_datasets: list[str]) -> str:
         n_metric_cols = len(panel_datasets) * len(metrics)
@@ -802,14 +802,14 @@ def make_full_numerical_table(df: pd.DataFrame, out_path: Path) -> None:
         metric_col_width = (target_table_width - fixed_width) / n_metric_cols
 
         col_spec = (
-            rf"|{centered_p}{{{model_col_width:.4f}\linewidth}}"
-            rf"|{centered_p}{{{method_col_width:.4f}\linewidth}}"
-            rf"|{centered_p}{{{entry_col_width:.4f}\linewidth}}||"
+            rf"|{centered_col}{{{model_col_width:.4f}\linewidth}}"
+            rf"|{centered_col}{{{method_col_width:.4f}\linewidth}}"
+            rf"|{centered_col}{{{entry_col_width:.4f}\linewidth}}||"
         )
 
         for _dataset in panel_datasets:
             for _metric in metrics:
-                col_spec += rf"{centered_p}{{{metric_col_width:.4f}\linewidth}}|"
+                col_spec += rf"{centered_col}{{{metric_col_width:.4f}\linewidth}}|"
             col_spec += "|"
 
         return col_spec
@@ -863,6 +863,8 @@ def make_full_numerical_table(df: pd.DataFrame, out_path: Path) -> None:
         lines.append(r"\hline")
 
     def append_panel_body(lines: list[str], panel_datasets: list[str]) -> None:
+
+        ncols = total_cols(panel_datasets)
         # Four logical rows per method. I95 is one row with a two-line cell.
         entry_rows = [
             ("mean", r"$\mu$"),
@@ -886,7 +888,7 @@ def make_full_numerical_table(df: pd.DataFrame, out_path: Path) -> None:
                     # Model multirow only once per model block.
                     if method_idx == 0 and entry_idx == 0:
                         row_cells.append(
-                            rf"\multirow{{{model_span}}}{{*}}{{\centering {model_label}}}"
+                            rf"\multirow[c]{{{model_span}}}{{=}}{{\centering\arraybackslash {model_label}}}"
                         )
                     else:
                         row_cells.append("")
@@ -894,7 +896,7 @@ def make_full_numerical_table(df: pd.DataFrame, out_path: Path) -> None:
                     # Method multirow once per method block.
                     if entry_idx == 0:
                         row_cells.append(
-                            rf"\multirow{{{method_span}}}{{*}}{{\centering {method_label}}}"
+                            rf"\multirow[c]{{{method_span}}}{{=}}{{\centering\arraybackslash {method_label}}}"
                         )
                     else:
                         row_cells.append("")
@@ -934,9 +936,14 @@ def make_full_numerical_table(df: pd.DataFrame, out_path: Path) -> None:
                             row_cells.append(value)
 
                     lines.append(" & ".join(row_cells) + r" \\")
-
+                
                 # Separator after each method block.
-                lines.append(r"\hline")
+                if method_idx < len(methods) - 1:
+                    # Do not cut through the Model multirow cell.
+                    lines.append(rf"\cline{{2-{ncols}}}")
+                else:
+                    # Firm separator after the full model block.
+                    lines.append(r"\hline")
 
 
     lines: list[str] = []
