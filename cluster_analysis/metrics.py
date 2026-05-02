@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import pickle
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterator, Sequence, Tuple
@@ -16,6 +17,52 @@ import orbit_count
 # GCD-11 uses the 11 non-redundant graphlet orbits for 2- to 4-node graphlets.
 # Orbit indices follow ORCA's node orbit ordering.
 GCD11_ORBITS: Sequence[int] = [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11]
+
+
+# ---------------------------------------------------------------------------
+# Lightweight per-graph cache
+# ---------------------------------------------------------------------------
+
+_CACHE_KEY = "_metrics_py_cache_v2"
+
+
+def _cache(G: nx.Graph) -> dict:
+    """
+    Per-graph metric cache.
+
+    This intentionally stores derived quantities in G.graph so a caller that asks
+    for k4_density and then C3_global does not recompute the 4-clique count.
+    The cache is graph-local and is cleared automatically if the graph object is
+    discarded. Do not mutate G after computing metrics unless you call
+    clear_metric_cache(G).
+    """
+    return G.graph.setdefault(_CACHE_KEY, {})
+
+
+def clear_metric_cache(G: nx.Graph) -> None:
+    """Clear cached metric values for this graph."""
+    G.graph.pop(_CACHE_KEY, None)
+
+
+def _cached_triangles(G: nx.Graph) -> dict:
+    c = _cache(G)
+    if "triangles" not in c:
+        c["triangles"] = nx.triangles(G)
+    return c["triangles"]
+
+
+def _cached_triangle_count(G: nx.Graph) -> int:
+    c = _cache(G)
+    if "unique_triangle_count" not in c:
+        c["unique_triangle_count"] = sum(_cached_triangles(G).values()) // 3
+    return c["unique_triangle_count"]
+
+
+def _cached_wedge_count(G: nx.Graph) -> int:
+    c = _cache(G)
+    if "wedge_count" not in c:
+        c["wedge_count"] = sum(math.comb(d, 2) for _, d in G.degree() if d >= 2)
+    return c["wedge_count"]
 
 
 def _progress(iterable, *, desc: str, show_progress: bool):
@@ -75,7 +122,9 @@ def load_graph(path: str | Path, *, show_progress: bool = True) -> nx.Graph:
 def _normalize_graph(G: nx.Graph) -> nx.Graph:
     G = nx.Graph(G)
     G.remove_edges_from(nx.selfloop_edges(G))
-    return nx.convert_node_labels_to_integers(G, ordering="sorted")
+    H = nx.convert_node_labels_to_integers(G, ordering="sorted")
+    clear_metric_cache(H)
+    return H
 
 
 # ---------------------------------------------------------------------------
@@ -83,12 +132,11 @@ def _normalize_graph(G: nx.Graph) -> nx.Graph:
 # ---------------------------------------------------------------------------
 
 def unique_triangle_count(G: nx.Graph) -> int:
-    tri_per_node = nx.triangles(G)
-    return sum(tri_per_node.values()) // 3
+    return _cached_triangle_count(G)
 
 
 def wedge_count(G: nx.Graph) -> int:
-    return sum(math.comb(d, 2) for _, d in G.degree() if d >= 2)
+    return _cached_wedge_count(G)
 
 
 def gcc(G: nx.Graph) -> float:
@@ -104,13 +152,18 @@ def alcc(G: nx.Graph) -> float:
     Repo / paper-operational definition:
     nodes with degree < 2 contribute 0, then divide by all nodes.
     """
-    tri = nx.triangles(G)
+    c = _cache(G)
+    if "alcc" in c:
+        return c["alcc"]
+
+    tri = _cached_triangles(G)
     total = 0.0
     n = G.number_of_nodes()
     for u, d in G.degree():
         if d >= 2:
             total += tri[u] / math.comb(d, 2)
-    return total / n if n else 0.0
+    c["alcc"] = total / n if n else 0.0
+    return c["alcc"]
 
 
 def alcc_other(G: nx.Graph) -> float:
@@ -118,7 +171,7 @@ def alcc_other(G: nx.Graph) -> float:
     Alternative definition: average only over nodes where local clustering is defined.
     This is not the operational definition used for the reproduced paper metrics.
     """
-    tri = nx.triangles(G)
+    tri = _cached_triangles(G)
     vals = []
     for u, d in G.degree():
         if d >= 2:
@@ -131,10 +184,77 @@ def alcc_other(G: nx.Graph) -> float:
 # ---------------------------------------------------------------------------
 
 def _ordered_neighbors(G: nx.Graph) -> Tuple[list[int], dict[int, int], dict[int, set[int]]]:
-    nodes = sorted(G.nodes())
+    # Degree ordering usually reduces the forward-neighbor candidate sets for
+    # clique enumeration. Ties are deterministic.
+    nodes = sorted(G.nodes(), key=lambda u: (G.degree(u), u))
     order = {u: i for i, u in enumerate(nodes)}
     nbrs_fwd = {u: {v for v in G.neighbors(u) if order[v] > order[u]} for u in nodes}
     return nodes, order, nbrs_fwd
+
+
+def count_4_cliques_fast(
+    G: nx.Graph,
+    *,
+    show_progress: bool = True,
+) -> int:
+    """
+    Count 4-cliques exactly once using an oriented forward-neighbor search.
+
+    This is specialized for k=4 and avoids yielding every clique as a Python
+    tuple. It also uses a degree-based ordering to reduce set-intersection
+    sizes. The result is exact.
+    """
+    c = _cache(G)
+    if "k4_count" in c:
+        return int(c["k4_count"])
+
+    nodes, order, nbrs_fwd = _ordered_neighbors(G)
+    count = 0
+
+    for u in _progress(nodes, desc="Counting 4-cliques", show_progress=show_progress):
+        Nu = nbrs_fwd[u]
+        if len(Nu) < 3:
+            continue
+
+        # v is the second node in the oriented clique.
+        for v in Nu:
+            common_uv = Nu & nbrs_fwd[v]
+            if len(common_uv) < 2:
+                continue
+
+            # w is the third node. Any x in common_uv ∩ N_fwd(w)
+            # completes u-v-w-x as a 4-clique with order u < v < w < x.
+            for w in common_uv:
+                count += len(common_uv & nbrs_fwd[w])
+
+    c["k4_count"] = int(count)
+    return int(count)
+
+
+def enumerate_4_cliques_fast(
+    G: nx.Graph,
+    *,
+    show_progress: bool = True,
+) -> Iterator[Tuple[int, int, int, int]]:
+    """
+    Enumerate 4-cliques exactly once using the same ordering as count_4_cliques_fast.
+
+    This is mainly for node-membership metrics. Counting should use
+    count_4_cliques_fast() because it avoids tuple creation.
+    """
+    nodes, order, nbrs_fwd = _ordered_neighbors(G)
+
+    for u in _progress(nodes, desc="Processing nodes for 4-cliques", show_progress=show_progress):
+        Nu = nbrs_fwd[u]
+        if len(Nu) < 3:
+            continue
+        for v in Nu:
+            common_uv = Nu & nbrs_fwd[v]
+            if len(common_uv) < 2:
+                continue
+            for w in common_uv:
+                for x in common_uv & nbrs_fwd[w]:
+                    yield (u, v, w, x)
 
 
 def enumerate_k_cliques(
@@ -149,6 +269,10 @@ def enumerate_k_cliques(
     """
     if k < 2:
         raise ValueError("k must be >= 2")
+
+    if k == 4:
+        yield from enumerate_4_cliques_fast(G, show_progress=show_progress)
+        return
 
     nodes, order, nbrs_fwd = _ordered_neighbors(G)
 
@@ -172,6 +296,10 @@ def enumerate_k_cliques(
 
 
 def count_k_cliques(G: nx.Graph, k: int, *, show_progress: bool = True) -> int:
+    if k == 3:
+        return unique_triangle_count(G)
+    if k == 4:
+        return count_4_cliques_fast(G, show_progress=show_progress)
     return sum(1 for _ in enumerate_k_cliques(G, k, show_progress=show_progress))
 
 
@@ -187,8 +315,18 @@ def k_clique_density_and_count(
     denom = math.comb(n, k)
     if denom == 0:
         return 0.0, 0
+
+    c = _cache(G)
+    key_density = f"k{k}_density"
+    key_count = f"k{k}_count"
+    if key_density in c and key_count in c:
+        return float(c[key_density]), int(c[key_count])
+
     cliques = count_k_cliques(G, k, show_progress=show_progress)
     density = cliques / denom
+
+    c[key_count] = int(cliques)
+    c[key_density] = float(density)
     return density, cliques
 
 
@@ -203,12 +341,26 @@ def node_k_clique_membership_counts(
     show_progress: bool = True,
 ) -> Dict[int, int]:
     """For each node u, count how many k-cliques contain u."""
+    c = _cache(G)
+    key = f"K{k}_node_membership"
+    if key in c:
+        return dict(c[key])
+
+    if k == 3:
+        counts = dict(_cached_triangles(G))
+        for u in G.nodes():
+            counts.setdefault(u, 0)
+        c[key] = counts
+        return dict(counts)
+
     counts: dict[int, int] = defaultdict(int)
     for clique in enumerate_k_cliques(G, k, show_progress=show_progress):
         for u in clique:
             counts[u] += 1
     for u in G.nodes():
         counts[u] += 0
+
+    c[key] = dict(counts)
     return dict(counts)
 
 
@@ -228,6 +380,11 @@ def higher_order_local_clustering(
     if ell < 2:
         raise ValueError("ell must be >= 2")
 
+    c = _cache(G)
+    key = f"C{ell}_local_dict"
+    if key in c:
+        return dict(c[key])
+
     K_ell_u = node_k_clique_membership_counts(G, ell, show_progress=show_progress)
     K_ell1_u = node_k_clique_membership_counts(G, ell + 1, show_progress=show_progress)
 
@@ -240,6 +397,8 @@ def higher_order_local_clustering(
         denom = (d - ell + 1) * K_ell_u.get(u, 0)
         if denom > 0:
             out[u] = K_ell1_u.get(u, 0) / denom
+
+    c[key] = dict(out)
     return out
 
 
@@ -249,8 +408,14 @@ def higher_order_average_local_clustering(
     *,
     show_progress: bool = True,
 ) -> float:
+    c = _cache(G)
+    key = f"C{ell}_avg_local"
+    if key in c:
+        return float(c[key])
+
     vals = list(higher_order_local_clustering(G, ell, show_progress=show_progress).values())
-    return float(np.mean(vals)) if vals else 0.0
+    c[key] = float(np.mean(vals)) if vals else 0.0
+    return float(c[key])
 
 
 def higher_order_global_clustering(
@@ -269,12 +434,31 @@ def higher_order_global_clustering(
         |W_ell| = sum_u |K_ell(u)| * (d_u - ell + 1)
 
     following Eqs. (4), (7), and (9) in Yin et al. (2018).
+
+    Optimization:
+    - For ell=3, |K_4| is the cached fast 4-clique count.
+    - For ell=3, |K_3(u)| is nx.triangles(G)[u], so no 3-clique
+      enumeration is needed.
     """
     if ell < 2:
         raise ValueError("ell must be >= 2")
 
-    num_cliques = count_k_cliques(G, ell + 1, show_progress=show_progress)
-    K_ell_u = node_k_clique_membership_counts(G, ell, show_progress=show_progress)
+    c = _cache(G)
+    key = f"C{ell}_global"
+    if key in c:
+        return float(c[key])
+
+    if ell == 3:
+        num_cliques = count_4_cliques_fast(G, show_progress=show_progress)
+        K_ell_u = _cached_triangles(G)
+    elif ell == 2:
+        # For ell=2 this reduces to triangle-based global clustering.
+        # Keep the generic formula explicit for consistency with C_ell notation.
+        num_cliques = unique_triangle_count(G)
+        K_ell_u = {u: d for u, d in G.degree()}  # number of 2-cliques incident to u
+    else:
+        num_cliques = count_k_cliques(G, ell + 1, show_progress=show_progress)
+        K_ell_u = node_k_clique_membership_counts(G, ell, show_progress=show_progress)
 
     W_ell = 0
     for u, d in _progress(
@@ -286,9 +470,11 @@ def higher_order_global_clustering(
             W_ell += K_ell_u.get(u, 0) * (d - ell + 1)
 
     if W_ell == 0:
-        return 0.0
+        c[key] = 0.0
+    else:
+        c[key] = ((ell * ell + ell) * num_cliques) / W_ell
 
-    return ((ell * ell + ell) * num_cliques) / W_ell
+    return float(c[key])
 
 
 # ---------------------------------------------------------------------------
@@ -384,3 +570,15 @@ def summarize_graph(
         out["C4_avg_local"] = higher_order_average_local_clustering(G, 4, show_progress=show_progress)
 
     return out
+
+
+# ---------------------------------------------------------------------------
+# Small timing helper
+# ---------------------------------------------------------------------------
+
+def time_metric(label: str, func):
+    """Convenience helper for ad-hoc profiling from a REPL."""
+    t0 = time.perf_counter()
+    value = func()
+    elapsed = time.perf_counter() - t0
+    return label, value, elapsed
