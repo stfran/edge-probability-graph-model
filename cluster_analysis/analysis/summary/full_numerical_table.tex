@@ -8,148 +8,148 @@
 \begin{longtable}{|>{\centering\arraybackslash}m{0.0450\linewidth}|>{\centering\arraybackslash}m{0.0650\linewidth}|>{\centering\arraybackslash}m{0.0450\linewidth}||>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}||>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}||>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}||}
 \caption{\small Full numerical Monte Carlo hypothesis-test results. Columns are grouped by dataset and metric. The GroundTruth row reports the observed metric value for each dataset. For each fitted model and realization method, the stacked rows report $\mu$ (generated-graph mean), $I_{95}$ (empirical 2.5--97.5 percentile interval), $p$ (two-sided Monte Carlo p-value), and $D$ (decision), where $\times$ indicates rejection and $\circ$ indicates failure to reject. $K_4$-density entries are scaled by $10^4$ for readability. EDGE, LOCL, and PARA denote edge-independent, local binding, and parallel binding realization, respectively.}\label{tab:full-hypothesis-results}\\
 \hline
-\multicolumn{3}{|c||}{dataset} & \multicolumn{4}{c||}{Hams} & \multicolumn{4}{c||}{Fcbk} & \multicolumn{4}{c||}{Cepg} \\
+\multicolumn{3}{|c||}{dataset} & \multicolumn{4}{c||}{Hams} & \multicolumn{4}{c||}{Fcbk} & \multicolumn{4}{c||}{Polb} \\
 \hline
 \multicolumn{3}{|c||}{metric} & GCC & ALCC & \shortstack{$K_4$ dens.\\$\times 10^4$} & $C_3$ & GCC & ALCC & \shortstack{$K_4$ dens.\\$\times 10^4$} & $C_3$ & GCC & ALCC & \shortstack{$K_4$ dens.\\$\times 10^4$} & $C_3$ \\
 \hline
-\multicolumn{3}{|c||}{GroundTruth} & 0.23 & 0.54 & 0.00 & 0.18 & 0.52 & 0.61 & 0.03 & 0.51 & 0.32 & 0.45 & 0.28 & 0.25 \\
+\multicolumn{3}{|c||}{GroundTruth} & 0.23 & 0.54 & 0.00 & 0.18 & 0.52 & 0.61 & 0.03 & 0.51 & 0.23 & 0.32 & 0.05 & 0.16 \\
 \hline\hline
 Model & Method & Entry &  &  &  &  &  &  &  &  &  &  &  &  \\
 \hline
-\multirow[c]{12}{=}{\centering\arraybackslash ER} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.01 & 0.01 & 0.00 & 0.00 & 0.01 & 0.01 & 0.00 & 0.00 & 0.03 & 0.03 & 0.00 & 0.00 \\
- &  & $I_{95}$ & \shortstack{[0.01-\\0.01]} & \shortstack{[0.01-\\0.01]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.01-\\0.01]} & \shortstack{[0.01-\\0.01]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.03-\\0.03]} & \shortstack{[0.03-\\0.03]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} \\
+\multirow[c]{12}{=}{\centering\arraybackslash ER} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.01 & 0.01 & 0.00 & 0.00 & 0.01 & 0.01 & 0.00 & 0.00 & 0.02 & 0.02 & 0.00 & 0.00 \\
+ &  & $I_{95}$ & \shortstack{[0.01-\\0.01]} & \shortstack{[0.01-\\0.01]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.01-\\0.01]} & \shortstack{[0.01-\\0.01]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.02-\\0.02]} & \shortstack{[0.02-\\0.02]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} \\
  &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
  &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
 \cline{2-15}
- & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.33 & 0.24 & 0.01 & 0.39 & 0.44 & 0.23 & 0.08 & 0.45 & 0.43 & 0.26 & 0.87 & 0.41 \\
- &  & $I_{95}$ & \shortstack{[0.29-\\0.39]} & \shortstack{[0.21-\\0.28]} & \shortstack{[0.00-\\0.01]} & \shortstack{[0.29-\\0.48]} & \shortstack{[0.29-\\0.58]} & \shortstack{[0.15-\\0.30]} & \shortstack{[0.01-\\0.21]} & \shortstack{[0.24-\\0.66]} & \shortstack{[0.26-\\0.63]} & \shortstack{[0.15-\\0.38]} & \shortstack{[0.05-\\2.59]} & \shortstack{[0.16-\\0.71]} \\
- &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.28 & 0.02 & 0.28 & 0.67 & 0.36 & 0.02 & 0.44 & 0.26 \\
- &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ \\
+ & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.33 & 0.24 & 0.01 & 0.39 & 0.44 & 0.23 & 0.08 & 0.45 & 0.36 & 0.26 & 0.13 & 0.38 \\
+ &  & $I_{95}$ & \shortstack{[0.29-\\0.39]} & \shortstack{[0.21-\\0.28]} & \shortstack{[0.00-\\0.01]} & \shortstack{[0.29-\\0.48]} & \shortstack{[0.29-\\0.58]} & \shortstack{[0.15-\\0.30]} & \shortstack{[0.01-\\0.21]} & \shortstack{[0.24-\\0.66]} & \shortstack{[0.26-\\0.45]} & \shortstack{[0.18-\\0.32]} & \shortstack{[0.02-\\0.28]} & \shortstack{[0.23-\\0.52]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.28 & 0.02 & 0.28 & 0.67 & 0.02 & 0.10 & 0.20 & 0.04 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\times$ \\
 \cline{2-15}
- & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & -- & -- & -- & -- & 0.57 & 0.81 & 0.21 & 0.56 & 0.51 & 0.75 & 1.19 & 0.47 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.51-\\0.63]} & \shortstack{[0.77-\\0.85]} & \shortstack{[0.15-\\0.31]} & \shortstack{[0.49-\\0.62]} & \shortstack{[0.45-\\0.61]} & \shortstack{[0.69-\\0.84]} & \shortstack{[0.87-\\2.05]} & \shortstack{[0.40-\\0.59]} \\
- &  & $p$ & -- & -- & -- & -- & 0.08 & 0.02 & 0.02 & 0.16 & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & -- & -- & -- & -- & $\circ$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+ & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.39 & 0.64 & 0.00 & 0.37 & 0.57 & 0.81 & 0.21 & 0.56 & 0.42 & 0.67 & 0.12 & 0.39 \\
+ &  & $I_{95}$ & \shortstack{[0.36-\\0.41]} & \shortstack{[0.61-\\0.67]} & \shortstack{[0.00-\\0.01]} & \shortstack{[0.34-\\0.40]} & \shortstack{[0.51-\\0.63]} & \shortstack{[0.77-\\0.85]} & \shortstack{[0.15-\\0.31]} & \shortstack{[0.49-\\0.62]} & \shortstack{[0.38-\\0.46]} & \shortstack{[0.61-\\0.72]} & \shortstack{[0.09-\\0.15]} & \shortstack{[0.34-\\0.44]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.08 & 0.02 & 0.02 & 0.16 & 0.02 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\times$ & $\times$ & $\times$ \\
 \hline
-\multirow[c]{12}{=}{\centering\arraybackslash CL} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & -- & -- & -- & -- & 0.06 & 0.06 & 0.00 & 0.02 & 0.22 & 0.22 & 0.13 & 0.13 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.06-\\0.06]} & \shortstack{[0.06-\\0.06]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.02-\\0.02]} & \shortstack{[0.22-\\0.23]} & \shortstack{[0.21-\\0.23]} & \shortstack{[0.12-\\0.14]} & \shortstack{[0.13-\\0.14]} \\
- &  & $p$ & -- & -- & -- & -- & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & -- & -- & -- & -- & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\multirow[c]{12}{=}{\centering\arraybackslash CL} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.06 & 0.06 & 0.00 & 0.02 & 0.06 & 0.06 & 0.00 & 0.02 & 0.17 & 0.17 & 0.03 & 0.10 \\
+ &  & $I_{95}$ & \shortstack{[0.06-\\0.06]} & \shortstack{[0.05-\\0.06]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.02-\\0.02]} & \shortstack{[0.06-\\0.06]} & \shortstack{[0.06-\\0.06]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.02-\\0.02]} & \shortstack{[0.17-\\0.18]} & \shortstack{[0.16-\\0.18]} & \shortstack{[0.03-\\0.03]} & \shortstack{[0.09-\\0.10]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
 \cline{2-15}
- & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & -- & -- & -- & -- & 0.25 & 0.31 & 0.09 & 0.21 & 0.29 & 0.43 & 0.71 & 0.18 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.14-\\0.41]} & \shortstack{[0.20-\\0.42]} & \shortstack{[0.00-\\0.48]} & \shortstack{[0.08-\\0.41]} & \shortstack{[0.26-\\0.33]} & \shortstack{[0.36-\\0.49]} & \shortstack{[0.38-\\1.30]} & \shortstack{[0.16-\\0.23]} \\
- &  & $p$ & -- & -- & -- & -- & 0.04 & 0.02 & 0.73 & 0.06 & 0.14 & 0.59 & 0.02 & 0.04 \\
- &  & $D$ & -- & -- & -- & -- & $\times$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\times$ \\
+ & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.17 & 0.26 & 0.01 & 0.16 & 0.25 & 0.31 & 0.09 & 0.21 & 0.21 & 0.34 & 0.09 & 0.12 \\
+ &  & $I_{95}$ & \shortstack{[0.12-\\0.25]} & \shortstack{[0.22-\\0.31]} & \shortstack{[0.00-\\0.02]} & \shortstack{[0.06-\\0.35]} & \shortstack{[0.14-\\0.41]} & \shortstack{[0.20-\\0.42]} & \shortstack{[0.00-\\0.48]} & \shortstack{[0.08-\\0.41]} & \shortstack{[0.20-\\0.23]} & \shortstack{[0.30-\\0.38]} & \shortstack{[0.07-\\0.13]} & \shortstack{[0.11-\\0.14]} \\
+ &  & $p$ & 0.12 & 0.02 & 0.22 & 0.61 & 0.04 & 0.02 & 0.73 & 0.06 & 0.22 & 0.28 & 0.02 & 0.02 \\
+ &  & $D$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\times$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\times$ \\
 \cline{2-15}
- & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & -- & -- & -- & -- & 0.33 & 0.62 & 0.12 & 0.35 & 0.31 & 0.58 & 0.86 & 0.18 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.26-\\0.40]} & \shortstack{[0.59-\\0.65]} & \shortstack{[0.05-\\0.22]} & \shortstack{[0.23-\\0.46]} & \shortstack{[0.30-\\0.32]} & \shortstack{[0.56-\\0.60]} & \shortstack{[0.68-\\1.06]} & \shortstack{[0.17-\\0.19]} \\
- &  & $p$ & -- & -- & -- & -- & 0.02 & 0.28 & 0.04 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & -- & -- & -- & -- & $\times$ & $\circ$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+ & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.19 & 0.47 & 0.01 & 0.17 & 0.33 & 0.62 & 0.12 & 0.35 & 0.22 & 0.47 & 0.09 & 0.11 \\
+ &  & $I_{95}$ & \shortstack{[0.17-\\0.21]} & \shortstack{[0.45-\\0.50]} & \shortstack{[0.00-\\0.01]} & \shortstack{[0.13-\\0.21]} & \shortstack{[0.26-\\0.40]} & \shortstack{[0.59-\\0.65]} & \shortstack{[0.05-\\0.22]} & \shortstack{[0.23-\\0.46]} & \shortstack{[0.22-\\0.23]} & \shortstack{[0.45-\\0.48]} & \shortstack{[0.08-\\0.11]} & \shortstack{[0.11-\\0.12]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.51 & 0.02 & 0.28 & 0.04 & 0.02 & 0.14 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\circ$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\times$ & $\times$ \\
 \hline
-\multirow[c]{12}{=}{\centering\arraybackslash SB} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & -- & -- & -- & -- & 0.15 & 0.08 & 0.00 & 0.08 & 0.26 & 0.20 & 0.08 & 0.14 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.14-\\0.15]} & \shortstack{[0.08-\\0.08]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.08-\\0.09]} & \shortstack{[0.26-\\0.26]} & \shortstack{[0.20-\\0.20]} & \shortstack{[0.08-\\0.09]} & \shortstack{[0.13-\\0.14]} \\
- &  & $p$ & -- & -- & -- & -- & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & -- & -- & -- & -- & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\multirow[c]{12}{=}{\centering\arraybackslash SB} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.08 & 0.04 & 0.00 & 0.10 & 0.15 & 0.08 & 0.00 & 0.08 & 0.14 & 0.16 & 0.00 & 0.04 \\
+ &  & $I_{95}$ & \shortstack{[0.08-\\0.08]} & \shortstack{[0.04-\\0.04]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.09-\\0.12]} & \shortstack{[0.14-\\0.15]} & \shortstack{[0.08-\\0.08]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.08-\\0.09]} & \shortstack{[0.14-\\0.15]} & \shortstack{[0.16-\\0.17]} & \shortstack{[0.00-\\0.01]} & \shortstack{[0.04-\\0.05]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
 \cline{2-15}
- & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & -- & -- & -- & -- & 0.44 & 0.34 & 0.07 & 0.39 & 0.33 & 0.42 & 0.76 & 0.23 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.31-\\0.60]} & \shortstack{[0.22-\\0.48]} & \shortstack{[0.01-\\0.22]} & \shortstack{[0.20-\\0.64]} & \shortstack{[0.28-\\0.40]} & \shortstack{[0.34-\\0.49]} & \shortstack{[0.32-\\1.69]} & \shortstack{[0.17-\\0.33]} \\
- &  & $p$ & -- & -- & -- & -- & 0.36 & 0.02 & 0.61 & 0.32 & 0.95 & 0.51 & 0.06 & 0.40 \\
- &  & $D$ & -- & -- & -- & -- & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+ & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.22 & 0.24 & 0.01 & 0.22 & 0.44 & 0.34 & 0.07 & 0.39 & 0.24 & 0.36 & 0.12 & 0.15 \\
+ &  & $I_{95}$ & \shortstack{[0.16-\\0.32]} & \shortstack{[0.19-\\0.30]} & \shortstack{[0.00-\\0.03]} & \shortstack{[0.12-\\0.42]} & \shortstack{[0.31-\\0.60]} & \shortstack{[0.22-\\0.48]} & \shortstack{[0.01-\\0.22]} & \shortstack{[0.20-\\0.64]} & \shortstack{[0.20-\\0.32]} & \shortstack{[0.29-\\0.44]} & \shortstack{[0.03-\\0.31]} & \shortstack{[0.10-\\0.32]} \\
+ &  & $p$ & 0.61 & 0.02 & 0.10 & 0.91 & 0.36 & 0.02 & 0.61 & 0.32 & 0.59 & 0.36 & 0.30 & 0.57 \\
+ &  & $D$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
 \cline{2-15}
- & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & -- & -- & -- & -- & 0.50 & 0.54 & 0.16 & 0.56 & 0.32 & 0.35 & 0.50 & 0.30 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.40-\\0.60]} & \shortstack{[0.47-\\0.62]} & \shortstack{[0.05-\\0.47]} & \shortstack{[0.38-\\0.75]} & \shortstack{[0.20-\\0.57]} & \shortstack{[0.26-\\0.48]} & \shortstack{[0.09-\\2.62]} & \shortstack{[0.14-\\0.70]} \\
- &  & $p$ & -- & -- & -- & -- & 0.99 & 0.16 & 0.02 & 0.83 & 0.95 & 0.18 & 0.77 & 0.63 \\
- &  & $D$ & -- & -- & -- & -- & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+ & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.24 & 0.52 & 0.01 & 0.24 & 0.50 & 0.54 & 0.16 & 0.56 & 0.18 & 0.24 & 0.13 & 0.13 \\
+ &  & $I_{95}$ & \shortstack{[0.22-\\0.27]} & \shortstack{[0.50-\\0.54]} & \shortstack{[0.01-\\0.01]} & \shortstack{[0.19-\\0.31]} & \shortstack{[0.40-\\0.60]} & \shortstack{[0.47-\\0.62]} & \shortstack{[0.05-\\0.47]} & \shortstack{[0.38-\\0.75]} & \shortstack{[0.14-\\0.32]} & \shortstack{[0.15-\\0.38]} & \shortstack{[0.01-\\0.84]} & \shortstack{[0.08-\\0.44]} \\
+ &  & $p$ & 0.46 & 0.10 & 0.02 & 0.06 & 0.99 & 0.16 & 0.02 & 0.83 & 0.14 & 0.22 & 0.46 & 0.16 \\
+ &  & $D$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
 \hline
-\multirow[c]{12}{=}{\centering\arraybackslash KR} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & -- & -- & -- & -- & 0.03 & 0.04 & 0.00 & 0.00 & 0.07 & 0.12 & 0.00 & 0.01 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.03-\\0.04]} & \shortstack{[0.04-\\0.04]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.01]} & \shortstack{[0.07-\\0.07]} & \shortstack{[0.12-\\0.13]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.01-\\0.02]} \\
- &  & $p$ & -- & -- & -- & -- & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & -- & -- & -- & -- & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\multirow[c]{12}{=}{\centering\arraybackslash KR} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.04 & 0.06 & 0.00 & 0.01 & 0.03 & 0.04 & 0.00 & 0.00 & 0.04 & 0.07 & 0.00 & 0.01 \\
+ &  & $I_{95}$ & \shortstack{[0.04-\\0.04]} & \shortstack{[0.06-\\0.06]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.01-\\0.01]} & \shortstack{[0.03-\\0.04]} & \shortstack{[0.04-\\0.04]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.01]} & \shortstack{[0.04-\\0.04]} & \shortstack{[0.07-\\0.08]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.01-\\0.01]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
 \cline{2-15}
- & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & -- & -- & -- & -- & 0.27 & 0.28 & 0.09 & 0.25 & 0.18 & 0.30 & 0.45 & 0.12 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.12-\\0.51]} & \shortstack{[0.19-\\0.37]} & \shortstack{[0.00-\\0.43]} & \shortstack{[0.07-\\0.58]} & \shortstack{[0.07-\\0.52]} & \shortstack{[0.18-\\0.43]} & \shortstack{[0.00-\\4.89]} & \shortstack{[0.03-\\0.43]} \\
- &  & $p$ & -- & -- & -- & -- & 0.08 & 0.02 & 1.00 & 0.10 & 0.26 & 0.06 & 0.32 & 0.28 \\
- &  & $D$ & -- & -- & -- & -- & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+ & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.14 & 0.22 & 0.00 & 0.14 & 0.27 & 0.28 & 0.09 & 0.25 & 0.13 & 0.24 & 0.02 & 0.08 \\
+ &  & $I_{95}$ & \shortstack{[0.08-\\0.24]} & \shortstack{[0.17-\\0.28]} & \shortstack{[0.00-\\0.02]} & \shortstack{[0.04-\\0.39]} & \shortstack{[0.12-\\0.51]} & \shortstack{[0.19-\\0.37]} & \shortstack{[0.00-\\0.43]} & \shortstack{[0.07-\\0.58]} & \shortstack{[0.06-\\0.32]} & \shortstack{[0.13-\\0.35]} & \shortstack{[0.00-\\0.15]} & \shortstack{[0.02-\\0.24]} \\
+ &  & $p$ & 0.12 & 0.02 & 0.91 & 0.50 & 0.08 & 0.02 & 1.00 & 0.10 & 0.20 & 0.22 & 0.22 & 0.32 \\
+ &  & $D$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
 \cline{2-15}
- & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & -- & -- & -- & -- & 0.36 & 0.61 & 0.08 & 0.44 & 0.26 & 0.47 & 0.29 & 0.24 \\
- &  & $I_{95}$ & -- & -- & -- & -- & \shortstack{[0.27-\\0.46]} & \shortstack{[0.57-\\0.64]} & \shortstack{[0.02-\\0.17]} & \shortstack{[0.30-\\0.58]} & \shortstack{[0.14-\\0.44]} & \shortstack{[0.38-\\0.55]} & \shortstack{[0.01-\\1.34]} & \shortstack{[0.09-\\0.54]} \\
- &  & $p$ & -- & -- & -- & -- & 0.02 & 0.95 & 0.16 & 0.36 & 0.42 & 0.53 & 0.61 & 0.85 \\
- &  & $D$ & -- & -- & -- & -- & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+ & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.16 & 0.39 & 0.00 & 0.18 & 0.36 & 0.61 & 0.08 & 0.44 & 0.23 & 0.43 & 0.04 & 0.26 \\
+ &  & $I_{95}$ & \shortstack{[0.13-\\0.20]} & \shortstack{[0.36-\\0.42]} & \shortstack{[0.00-\\0.01]} & \shortstack{[0.11-\\0.25]} & \shortstack{[0.27-\\0.46]} & \shortstack{[0.57-\\0.64]} & \shortstack{[0.02-\\0.17]} & \shortstack{[0.30-\\0.58]} & \shortstack{[0.13-\\0.40]} & \shortstack{[0.36-\\0.50]} & \shortstack{[0.00-\\0.19]} & \shortstack{[0.09-\\0.55]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.08 & 0.79 & 0.02 & 0.95 & 0.16 & 0.36 & 0.97 & 0.04 & 0.53 & 0.48 \\
+ &  & $D$ & $\times$ & $\times$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ \\
 \hline
 \end{longtable}
 
 \vspace{0.75em}
 
-\begin{longtable}{|>{\centering\arraybackslash}m{0.0450\linewidth}|>{\centering\arraybackslash}m{0.0650\linewidth}|>{\centering\arraybackslash}m{0.0450\linewidth}||>{\centering\arraybackslash}m{0.2025\linewidth}|>{\centering\arraybackslash}m{0.2025\linewidth}|>{\centering\arraybackslash}m{0.2025\linewidth}|>{\centering\arraybackslash}m{0.2025\linewidth}||}
-\multicolumn{7}{c}{\textbf{Table~\ref{tab:full-hypothesis-results} continued}} \\
+\begin{longtable}{|>{\centering\arraybackslash}m{0.0450\linewidth}|>{\centering\arraybackslash}m{0.0650\linewidth}|>{\centering\arraybackslash}m{0.0450\linewidth}||>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}||>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}||>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}|>{\centering\arraybackslash}m{0.0675\linewidth}||}
+\multicolumn{15}{c}{\textbf{Table~\ref{tab:full-hypothesis-results} continued}} \\
 \hline
-\multicolumn{3}{|c||}{dataset} & \multicolumn{4}{c||}{Scht} \\
+\multicolumn{3}{|c||}{dataset} & \multicolumn{4}{c||}{Spam} & \multicolumn{4}{c||}{Cepg} & \multicolumn{4}{c||}{Scht} \\
 \hline
-\multicolumn{3}{|c||}{metric} & GCC & ALCC & \shortstack{$K_4$ dens.\\$\times 10^4$} & $C_3$ \\
+\multicolumn{3}{|c||}{metric} & GCC & ALCC & \shortstack{$K_4$ dens.\\$\times 10^4$} & $C_3$ & GCC & ALCC & \shortstack{$K_4$ dens.\\$\times 10^4$} & $C_3$ & GCC & ALCC & \shortstack{$K_4$ dens.\\$\times 10^4$} & $C_3$ \\
 \hline
-\multicolumn{3}{|c||}{GroundTruth} & 0.38 & 0.35 & 0.34 & 0.31 \\
+\multicolumn{3}{|c||}{GroundTruth} & 0.15 & 0.29 & 0.00 & 0.09 & 0.32 & 0.45 & 0.28 & 0.25 & 0.38 & 0.35 & 0.34 & 0.31 \\
 \hline\hline
-Model & Method & Entry &  &  &  &  \\
+Model & Method & Entry &  &  &  &  &  &  &  &  &  &  &  &  \\
 \hline
-\multirow[c]{12}{=}{\centering\arraybackslash ER} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.03 & 0.03 & 0.00 & 0.00 \\
- &  & $I_{95}$ & \shortstack{[0.03-\\0.03]} & \shortstack{[0.03-\\0.03]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} \\
- &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ \\
-\cline{2-7}
- & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.44 & 0.24 & 1.05 & 0.42 \\
- &  & $I_{95}$ & \shortstack{[0.18-\\0.66]} & \shortstack{[0.10-\\0.36]} & \shortstack{[0.00-\\3.76]} & \shortstack{[0.07-\\0.72]} \\
- &  & $p$ & 0.63 & 0.12 & 0.61 & 0.55 \\
- &  & $D$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
-\cline{2-7}
- & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.56 & 0.79 & 2.14 & 0.52 \\
- &  & $I_{95}$ & \shortstack{[0.49-\\0.65]} & \shortstack{[0.73-\\0.86]} & \shortstack{[1.27-\\4.16]} & \shortstack{[0.45-\\0.63]} \\
- &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\multirow[c]{12}{=}{\centering\arraybackslash ER} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.03 & 0.03 & 0.00 & 0.00 & 0.03 & 0.03 & 0.00 & 0.00 \\
+ &  & $I_{95}$ & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.03-\\0.03]} & \shortstack{[0.03-\\0.03]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.03-\\0.03]} & \shortstack{[0.03-\\0.03]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\cline{2-15}
+ & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.34 & 0.23 & 0.00 & 0.40 & 0.43 & 0.26 & 0.87 & 0.41 & 0.44 & 0.24 & 1.05 & 0.42 \\
+ &  & $I_{95}$ & \shortstack{[0.30-\\0.37]} & \shortstack{[0.21-\\0.26]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.33-\\0.47]} & \shortstack{[0.26-\\0.63]} & \shortstack{[0.15-\\0.38]} & \shortstack{[0.05-\\2.59]} & \shortstack{[0.16-\\0.71]} & \shortstack{[0.18-\\0.66]} & \shortstack{[0.10-\\0.36]} & \shortstack{[0.00-\\3.76]} & \shortstack{[0.07-\\0.72]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.36 & 0.02 & 0.44 & 0.26 & 0.63 & 0.12 & 0.61 & 0.55 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+\cline{2-15}
+ & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.40 & 0.66 & 0.00 & 0.40 & 0.51 & 0.75 & 1.19 & 0.47 & 0.56 & 0.79 & 2.14 & 0.52 \\
+ &  & $I_{95}$ & \shortstack{[0.38-\\0.42]} & \shortstack{[0.64-\\0.69]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.37-\\0.42]} & \shortstack{[0.45-\\0.61]} & \shortstack{[0.69-\\0.84]} & \shortstack{[0.87-\\2.05]} & \shortstack{[0.40-\\0.59]} & \shortstack{[0.49-\\0.65]} & \shortstack{[0.73-\\0.86]} & \shortstack{[1.27-\\4.16]} & \shortstack{[0.45-\\0.63]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
 \hline
-\multirow[c]{12}{=}{\centering\arraybackslash CL} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.24 & 0.23 & 0.13 & 0.16 \\
- &  & $I_{95}$ & \shortstack{[0.24-\\0.24]} & \shortstack{[0.23-\\0.24]} & \shortstack{[0.13-\\0.14]} & \shortstack{[0.16-\\0.17]} \\
- &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ \\
-\cline{2-7}
- & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.32 & 0.47 & 0.97 & 0.22 \\
- &  & $I_{95}$ & \shortstack{[0.28-\\0.35]} & \shortstack{[0.38-\\0.56]} & \shortstack{[0.45-\\1.94]} & \shortstack{[0.18-\\0.26]} \\
- &  & $p$ & 0.02 & 0.02 & 0.06 & 0.02 \\
- &  & $D$ & $\times$ & $\times$ & $\circ$ & $\times$ \\
-\cline{2-7}
- & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.30 & 0.61 & 0.82 & 0.21 \\
- &  & $I_{95}$ & \shortstack{[0.24-\\0.41]} & \shortstack{[0.51-\\0.66]} & \shortstack{[0.23-\\5.06]} & \shortstack{[0.15-\\0.38]} \\
- &  & $p$ & 0.08 & 0.02 & 0.91 & 0.10 \\
- &  & $D$ & $\circ$ & $\times$ & $\circ$ & $\circ$ \\
+\multirow[c]{12}{=}{\centering\arraybackslash CL} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.06 & 0.06 & 0.00 & 0.04 & 0.22 & 0.22 & 0.13 & 0.13 & 0.24 & 0.23 & 0.13 & 0.16 \\
+ &  & $I_{95}$ & \shortstack{[0.06-\\0.07]} & \shortstack{[0.06-\\0.06]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.04-\\0.04]} & \shortstack{[0.22-\\0.23]} & \shortstack{[0.21-\\0.23]} & \shortstack{[0.12-\\0.14]} & \shortstack{[0.13-\\0.14]} & \shortstack{[0.24-\\0.24]} & \shortstack{[0.23-\\0.24]} & \shortstack{[0.13-\\0.14]} & \shortstack{[0.16-\\0.17]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\cline{2-15}
+ & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.12 & 0.26 & 0.00 & 0.10 & 0.29 & 0.43 & 0.71 & 0.18 & 0.32 & 0.47 & 0.97 & 0.22 \\
+ &  & $I_{95}$ & \shortstack{[0.10-\\0.16]} & \shortstack{[0.23-\\0.29]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.05-\\0.20]} & \shortstack{[0.26-\\0.33]} & \shortstack{[0.36-\\0.49]} & \shortstack{[0.38-\\1.30]} & \shortstack{[0.16-\\0.23]} & \shortstack{[0.28-\\0.35]} & \shortstack{[0.38-\\0.56]} & \shortstack{[0.45-\\1.94]} & \shortstack{[0.18-\\0.26]} \\
+ &  & $p$ & 0.22 & 0.16 & 0.02 & 0.91 & 0.14 & 0.59 & 0.02 & 0.04 & 0.02 & 0.02 & 0.06 & 0.02 \\
+ &  & $D$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\times$ & $\times$ & $\times$ & $\circ$ & $\times$ \\
+\cline{2-15}
+ & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.13 & 0.43 & 0.00 & 0.09 & 0.31 & 0.58 & 0.86 & 0.18 & 0.30 & 0.61 & 0.82 & 0.21 \\
+ &  & $I_{95}$ & \shortstack{[0.12-\\0.14]} & \shortstack{[0.42-\\0.45]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.07-\\0.10]} & \shortstack{[0.30-\\0.32]} & \shortstack{[0.56-\\0.60]} & \shortstack{[0.68-\\1.06]} & \shortstack{[0.17-\\0.19]} & \shortstack{[0.24-\\0.41]} & \shortstack{[0.51-\\0.66]} & \shortstack{[0.23-\\5.06]} & \shortstack{[0.15-\\0.38]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.46 & 0.02 & 0.02 & 0.02 & 0.02 & 0.08 & 0.02 & 0.91 & 0.10 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\times$ & $\times$ & $\times$ & $\circ$ & $\times$ & $\circ$ & $\circ$ \\
 \hline
-\multirow[c]{12}{=}{\centering\arraybackslash SB} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.27 & 0.13 & 0.11 & 0.17 \\
- &  & $I_{95}$ & \shortstack{[0.27-\\0.27]} & \shortstack{[0.13-\\0.13]} & \shortstack{[0.11-\\0.12]} & \shortstack{[0.17-\\0.17]} \\
- &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ \\
-\cline{2-7}
- & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.35 & 0.39 & 1.41 & 0.24 \\
- &  & $I_{95}$ & \shortstack{[0.30-\\0.45]} & \shortstack{[0.31-\\0.46]} & \shortstack{[0.43-\\3.78]} & \shortstack{[0.19-\\0.44]} \\
- &  & $p$ & 0.28 & 0.44 & 0.04 & 0.22 \\
- &  & $D$ & $\circ$ & $\circ$ & $\times$ & $\circ$ \\
-\cline{2-7}
- & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.34 & 0.44 & 0.70 & 0.26 \\
- &  & $I_{95}$ & \shortstack{[0.29-\\0.45]} & \shortstack{[0.39-\\0.52]} & \shortstack{[0.32-\\2.03]} & \shortstack{[0.18-\\0.50]} \\
- &  & $p$ & 0.44 & 0.02 & 0.10 & 0.48 \\
- &  & $D$ & $\circ$ & $\times$ & $\circ$ & $\circ$ \\
+\multirow[c]{12}{=}{\centering\arraybackslash SB} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.09 & 0.04 & 0.00 & 0.08 & 0.26 & 0.20 & 0.08 & 0.14 & 0.27 & 0.13 & 0.11 & 0.17 \\
+ &  & $I_{95}$ & \shortstack{[0.09-\\0.10]} & \shortstack{[0.03-\\0.04]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.07-\\0.08]} & \shortstack{[0.26-\\0.26]} & \shortstack{[0.20-\\0.20]} & \shortstack{[0.08-\\0.09]} & \shortstack{[0.13-\\0.14]} & \shortstack{[0.27-\\0.27]} & \shortstack{[0.13-\\0.13]} & \shortstack{[0.11-\\0.12]} & \shortstack{[0.17-\\0.17]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\cline{2-15}
+ & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.15 & 0.23 & 0.00 & 0.13 & 0.33 & 0.42 & 0.76 & 0.23 & 0.35 & 0.39 & 1.41 & 0.24 \\
+ &  & $I_{95}$ & \shortstack{[0.13-\\0.19]} & \shortstack{[0.19-\\0.26]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.08-\\0.23]} & \shortstack{[0.28-\\0.40]} & \shortstack{[0.34-\\0.49]} & \shortstack{[0.32-\\1.69]} & \shortstack{[0.17-\\0.33]} & \shortstack{[0.30-\\0.45]} & \shortstack{[0.31-\\0.46]} & \shortstack{[0.43-\\3.78]} & \shortstack{[0.19-\\0.44]} \\
+ &  & $p$ & 0.77 & 0.02 & 0.02 & 0.51 & 0.95 & 0.51 & 0.06 & 0.40 & 0.28 & 0.44 & 0.04 & 0.22 \\
+ &  & $D$ & $\circ$ & $\times$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\circ$ \\
+\cline{2-15}
+ & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.16 & 0.35 & 0.00 & 0.15 & 0.32 & 0.35 & 0.50 & 0.30 & 0.34 & 0.44 & 0.70 & 0.26 \\
+ &  & $I_{95}$ & \shortstack{[0.14-\\0.18]} & \shortstack{[0.32-\\0.38]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.10-\\0.21]} & \shortstack{[0.20-\\0.57]} & \shortstack{[0.26-\\0.48]} & \shortstack{[0.09-\\2.62]} & \shortstack{[0.14-\\0.70]} & \shortstack{[0.29-\\0.45]} & \shortstack{[0.39-\\0.52]} & \shortstack{[0.32-\\2.03]} & \shortstack{[0.18-\\0.50]} \\
+ &  & $p$ & 0.36 & 0.02 & 0.02 & 0.02 & 0.95 & 0.18 & 0.77 & 0.63 & 0.44 & 0.02 & 0.10 & 0.48 \\
+ &  & $D$ & $\circ$ & $\times$ & $\times$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ \\
 \hline
-\multirow[c]{12}{=}{\centering\arraybackslash KR} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.03 & 0.05 & 0.00 & 0.00 \\
- &  & $I_{95}$ & \shortstack{[0.03-\\0.03]} & \shortstack{[0.05-\\0.06]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.01]} \\
- &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 \\
- &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ \\
-\cline{2-7}
- & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.18 & 0.30 & 0.33 & 0.13 \\
- &  & $I_{95}$ & \shortstack{[0.06-\\0.49]} & \shortstack{[0.14-\\0.48]} & \shortstack{[0.00-\\2.93]} & \shortstack{[0.02-\\0.43]} \\
- &  & $p$ & 0.24 & 0.59 & 0.28 & 0.20 \\
- &  & $D$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
-\cline{2-7}
- & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.34 & 0.59 & 0.29 & 0.35 \\
- &  & $I_{95}$ & \shortstack{[0.15-\\0.63]} & \shortstack{[0.51-\\0.64]} & \shortstack{[0.01-\\1.64]} & \shortstack{[0.10-\\0.72]} \\
- &  & $p$ & 0.65 & 0.02 & 0.42 & 0.89 \\
- &  & $D$ & $\circ$ & $\times$ & $\circ$ & $\circ$ \\
+\multirow[c]{12}{=}{\centering\arraybackslash KR} & \multirow[c]{4}{=}{\centering\arraybackslash EDGE} & $\mu$ & 0.01 & 0.02 & 0.00 & 0.00 & 0.07 & 0.12 & 0.00 & 0.01 & 0.03 & 0.05 & 0.00 & 0.00 \\
+ &  & $I_{95}$ & \shortstack{[0.01-\\0.01]} & \shortstack{[0.02-\\0.03]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.07-\\0.07]} & \shortstack{[0.12-\\0.13]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.01-\\0.02]} & \shortstack{[0.03-\\0.03]} & \shortstack{[0.05-\\0.06]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.00-\\0.01]} \\
+ &  & $p$ & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 & 0.02 \\
+ &  & $D$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\cline{2-15}
+ & \multirow[c]{4}{=}{\centering\arraybackslash LOCL} & $\mu$ & 0.11 & 0.18 & 0.00 & 0.13 & 0.18 & 0.30 & 0.45 & 0.12 & 0.18 & 0.30 & 0.33 & 0.13 \\
+ &  & $I_{95}$ & \shortstack{[0.05-\\0.24]} & \shortstack{[0.13-\\0.23]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.03-\\0.31]} & \shortstack{[0.07-\\0.52]} & \shortstack{[0.18-\\0.43]} & \shortstack{[0.00-\\4.89]} & \shortstack{[0.03-\\0.43]} & \shortstack{[0.06-\\0.49]} & \shortstack{[0.14-\\0.48]} & \shortstack{[0.00-\\2.93]} & \shortstack{[0.02-\\0.43]} \\
+ &  & $p$ & 0.42 & 0.02 & 0.61 & 0.95 & 0.26 & 0.06 & 0.32 & 0.28 & 0.24 & 0.59 & 0.28 & 0.20 \\
+ &  & $D$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+\cline{2-15}
+ & \multirow[c]{4}{=}{\centering\arraybackslash PARA} & $\mu$ & 0.15 & 0.37 & 0.00 & 0.24 & 0.26 & 0.47 & 0.29 & 0.24 & 0.34 & 0.59 & 0.29 & 0.35 \\
+ &  & $I_{95}$ & \shortstack{[0.10-\\0.22]} & \shortstack{[0.34-\\0.40]} & \shortstack{[0.00-\\0.00]} & \shortstack{[0.12-\\0.43]} & \shortstack{[0.14-\\0.44]} & \shortstack{[0.38-\\0.55]} & \shortstack{[0.01-\\1.34]} & \shortstack{[0.09-\\0.54]} & \shortstack{[0.15-\\0.63]} & \shortstack{[0.51-\\0.64]} & \shortstack{[0.01-\\1.64]} & \shortstack{[0.10-\\0.72]} \\
+ &  & $p$ & 0.95 & 0.02 & 0.79 & 0.04 & 0.42 & 0.53 & 0.61 & 0.85 & 0.65 & 0.02 & 0.42 & 0.89 \\
+ &  & $D$ & $\circ$ & $\times$ & $\circ$ & $\times$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\circ$ & $\times$ & $\circ$ & $\circ$ \\
 \hline
 \end{longtable}
 
